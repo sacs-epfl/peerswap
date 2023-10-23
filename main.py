@@ -1,10 +1,9 @@
+import csv
 import multiprocessing
 import os
 import time
 from multiprocessing import Process
 from typing import List
-
-import pandas as pd
 
 from simulation import Simulation
 
@@ -54,20 +53,18 @@ if __name__ == "__main__":
         p.join()
 
     print("Processes done - combining results")
+    merged_frequencies: List[int] = [0] * NODES
     input_files = [os.path.join("data", "frequencies_%d.csv" % process_index) for process_index in range(cpus_to_use)]
+    for input_file in input_files:
+        with open(input_file, "r") as in_file:
+            reader = csv.reader(in_file)
+            next(reader)  # Skip the header
+            for row in reader:
+                node_id, freq = int(row[0]), int(row[1])
+                merged_frequencies[node_id] += freq
+
     output_file_name = os.path.join("data", "frequencies.csv")
-    dfs = [pd.read_csv(file) for file in input_files]
-
-    # Step 2: Merge the dataframes
-    merged_df = dfs[0]
-    for df in dfs[1:]:
-        merged_df = merged_df.merge(df, on='node')
-
-    # Step 3: Sum the freq values
-    merged_df['freq'] = merged_df.filter(like='freq').sum(axis=1)
-
-    # Step 4: Create a new dataframe
-    result_df = merged_df[['node', 'freq']]
-
-    # Step 5: Write the new dataframe to a CSV file
-    result_df.to_csv(output_file_name, index=False)
+    with open(output_file_name, "w") as out_file:
+        out_file.write("node,freq\n")
+        for node_ind, freq in enumerate(merged_frequencies):
+            out_file.write("%d,%d\n" % (node_ind, freq))

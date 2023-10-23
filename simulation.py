@@ -11,7 +11,7 @@ from event import Event
 class Simulation:
 
     POISSON_RATE = 1.0       # The rate at which edges are "activated" for a swap
-    EXPERIMENT_TIME = 120    # The duration of the experiment, in seconds
+    EXPERIMENT_TIME = 60     # The duration of the experiment, in seconds
     K = 4                    # The degree of the k-regular graph
 
     def __init__(self, nodes: int, seed: int):
