@@ -30,6 +30,9 @@ class Simulation:
             self.vertex_to_node_map[i] = i
             self.node_to_vertex_map[i] = i
 
+        # Seed the RNG
+        np.random.seed(self.seed)
+
         # Create the topology
         self.G = random_regular_graph(self.K, self.nodes, self.seed)
 
