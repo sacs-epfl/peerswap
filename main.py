@@ -1,5 +1,73 @@
+import multiprocessing
+import os
+import time
+from multiprocessing import Process
+from typing import List
+
+import pandas as pd
+
 from simulation import Simulation
 
+RUNS_PER_PROCESS = 100   # The number of runs we will do in each subprocess
+NODES = 100              # The total number of nodes in the experiment
+
+
+def run(process_index: int):
+    total_swaps: int = 0
+    nb_frequencies: List[int] = [0] * NODES
+    start_time = time.time()
+    for run_index in range(RUNS_PER_PROCESS):
+        seed: int = process_index * 100 + run_index  # Make sure the seed is unique across runs
+        simulation = Simulation(NODES, seed)
+        simulation.run()
+        total_swaps += simulation.swaps
+
+        for node_ind in range(NODES):
+            nb_frequencies[node_ind] += simulation.nb_frequencies[node_ind]
+
+    print("Experiment took %f s., swaps done: %d" % (time.time() - start_time, total_swaps))
+
+    # Write away the results
+    if not os.path.exists("data"):
+        os.mkdir("data")
+
+    with open(os.path.join("data", "frequencies_%d.csv" % process_index), "w") as out_file:
+        out_file.write("node,freq\n")
+        for node_id, freq in enumerate(nb_frequencies):
+            out_file.write("%d,%d\n" % (node_id, freq))
+
+
 if __name__ == "__main__":
-    simulation = Simulation()
-    simulation.run()
+    # How many CPUs do we have?
+    num_cpus = multiprocessing.cpu_count()
+    cpus_to_use = num_cpus - 1  # Don't be greedy and use all the CPUs :)
+
+    print("Will start experiments on %d CPUs..." % cpus_to_use)
+
+    processes = []
+    for process_index in range(cpus_to_use):
+        p = Process(target=run, args=(process_index,))
+        p.start()
+        processes.append(p)
+
+    for p in processes:
+        p.join()
+
+    print("Processes done - combining results")
+    input_files = [os.path.join("data", "frequencies_%d.csv" % process_index) for process_index in range(cpus_to_use)]
+    output_file_name = os.path.join("data", "frequencies.csv")
+    dfs = [pd.read_csv(file) for file in input_files]
+
+    # Step 2: Merge the dataframes
+    merged_df = dfs[0]
+    for df in dfs[1:]:
+        merged_df = merged_df.merge(df, on='node')
+
+    # Step 3: Sum the freq values
+    merged_df['freq'] = merged_df.filter(like='freq').sum(axis=1)
+
+    # Step 4: Create a new dataframe
+    result_df = merged_df[['node', 'freq']]
+
+    # Step 5: Write the new dataframe to a CSV file
+    result_df.to_csv(output_file_name, index=False)
