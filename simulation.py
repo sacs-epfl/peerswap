@@ -10,23 +10,19 @@ from event import Event
 
 class Simulation:
 
-    POISSON_RATE = 1.0       # The rate at which edges are "activated" for a swap
-    EXPERIMENT_TIME = 60     # The duration of the experiment, in seconds
-    K = 4                    # The degree of the k-regular graph
-
-    def __init__(self, nodes: int, seed: int):
+    def __init__(self, args, seed: int):
+        self.args = args
         self.current_time: float = 0
-        self.nodes: int = nodes
         self.seed: int = seed
         self.events: List[Event] = []
         self.swaps: int = 0
-        self.nb_frequencies: List[int] = [0] * self.nodes
-        self.node_to_track: int = Random(self.seed).randint(0, self.nodes - 1)
+        self.nb_frequencies: List[int] = [0] * self.args.nodes
+        self.node_to_track: int = Random(self.seed).randint(0, self.args.nodes - 1)
         heapq.heapify(self.events)
 
         self.vertex_to_node_map: Dict[int, int] = {}
         self.node_to_vertex_map: Dict[int, int] = {}
-        for i in range(self.nodes):
+        for i in range(self.args.nodes):
             self.vertex_to_node_map[i] = i
             self.node_to_vertex_map[i] = i
 
@@ -34,10 +30,10 @@ class Simulation:
         np.random.seed(self.seed)
 
         # Create the topology
-        self.G = random_regular_graph(self.K, self.nodes, self.seed)
+        self.G = random_regular_graph(self.args.k, self.args.nodes, self.seed)
 
     def generate_inter_arrival_times(self):
-        return np.random.exponential(scale=1 / self.POISSON_RATE)
+        return np.random.exponential(scale=1 / self.args.poisson_rate)
 
     def schedule(self, event: Event):
         heapq.heappush(self.events, event)
@@ -74,7 +70,7 @@ class Simulation:
         while self.events:
             event = heapq.heappop(self.events)
             self.current_time = event.time
-            if self.current_time >= self.EXPERIMENT_TIME:
+            if self.current_time >= self.args.time_per_run:
                 break
             self.process_event(event)
 

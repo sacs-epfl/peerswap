@@ -5,23 +5,21 @@ import time
 from multiprocessing import Process
 from typing import List
 
+from args import get_args
 from simulation import Simulation
 
-RUNS_PER_PROCESS = 100   # The number of runs we will do in each subprocess
-NODES = 100              # The total number of nodes in the experiment
 
-
-def run(process_index: int):
+def run(process_index: int, args):
     total_swaps: int = 0
-    nb_frequencies: List[int] = [0] * NODES
+    nb_frequencies: List[int] = [0] * args.nodes
     start_time = time.time()
-    for run_index in range(RUNS_PER_PROCESS):
+    for run_index in range(args.runs_per_process):
         seed: int = process_index * 100 + run_index  # Make sure the seed is unique across runs
-        simulation = Simulation(NODES, seed)
+        simulation = Simulation(args, seed)
         simulation.run()
         total_swaps += simulation.swaps
 
-        for node_ind in range(NODES):
+        for node_ind in range(args.nodes):
             nb_frequencies[node_ind] += simulation.nb_frequencies[node_ind]
 
     print("Experiment took %f s., swaps done: %d" % (time.time() - start_time, total_swaps))
@@ -37,6 +35,8 @@ def run(process_index: int):
 
 
 if __name__ == "__main__":
+    args = get_args()
+
     # How many CPUs do we have?
     num_cpus = multiprocessing.cpu_count()
     cpus_to_use = num_cpus - 1  # Don't be greedy and use all the CPUs :)
@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
     processes = []
     for process_index in range(cpus_to_use):
-        p = Process(target=run, args=(process_index,))
+        p = Process(target=run, args=(process_index, args))
         p.start()
         processes.append(p)
 
@@ -53,7 +53,7 @@ if __name__ == "__main__":
         p.join()
 
     print("Processes done - combining results")
-    merged_frequencies: List[int] = [0] * NODES
+    merged_frequencies: List[int] = [0] * args.nodes
     input_files = [os.path.join("data", "frequencies_%d.csv" % process_index) for process_index in range(cpus_to_use)]
     for input_file in input_files:
         with open(input_file, "r") as in_file:
