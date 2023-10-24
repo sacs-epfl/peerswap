@@ -14,8 +14,7 @@ def run(process_index: int, args):
     nb_frequencies: List[int] = [0] * args.nodes
     start_time = time.time()
     for run_index in range(args.runs_per_process):
-        seed: int = process_index * 100 + run_index  # Make sure the seed is unique across runs
-        simulation = Simulation(args, seed)
+        simulation = Simulation(args)
         simulation.run()
         total_swaps += simulation.swaps
 

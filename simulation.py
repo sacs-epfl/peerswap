@@ -1,5 +1,4 @@
 import heapq
-from random import Random
 from typing import List, Dict
 
 import numpy as np
@@ -10,14 +9,13 @@ from event import Event
 
 class Simulation:
 
-    def __init__(self, args, seed: int):
+    def __init__(self, args):
         self.args = args
         self.current_time: float = 0
-        self.seed: int = seed
         self.events: List[Event] = []
         self.swaps: int = 0
         self.nb_frequencies: List[int] = [0] * self.args.nodes
-        self.node_to_track: int = Random(self.seed).randint(0, self.args.nodes - 1)
+        self.node_to_track: int = 0
         heapq.heapify(self.events)
 
         self.vertex_to_node_map: Dict[int, int] = {}
@@ -26,11 +24,8 @@ class Simulation:
             self.vertex_to_node_map[i] = i
             self.node_to_vertex_map[i] = i
 
-        # Seed the RNG
-        np.random.seed(self.seed)
-
         # Create the topology
-        self.G = random_regular_graph(self.args.k, self.args.nodes, self.seed)
+        self.G = random_regular_graph(self.args.k, self.args.nodes, seed=42)
 
     def generate_inter_arrival_times(self):
         return np.random.exponential(scale=1 / self.args.poisson_rate)
