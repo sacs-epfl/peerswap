@@ -3,8 +3,8 @@ This script computes the total number of unique neighbourhoods, given a total ne
 """
 import math
 
-N = 50
-K = 4
+N = 64
+K = 5
 
 nbs = math.comb(N - 1, K)
 print("Neighbourhoods (N = %d, K = %d): %d" % (N, K, nbs))
