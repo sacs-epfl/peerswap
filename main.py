@@ -7,6 +7,7 @@ from collections import defaultdict
 from multiprocessing import Process
 from typing import List
 
+import yappi
 from networkx import random_regular_graph
 
 from args import get_args
@@ -14,6 +15,9 @@ from simulation import Simulation
 
 
 def run(process_index: int, args, data_dir):
+    if args.profile:
+        yappi.start(builtins=True)
+
     total_swaps: int = 0
     nb_frequencies: List[int] = [0] * args.nodes
     nbh_frequencies = defaultdict(lambda: 0)
@@ -30,6 +34,12 @@ def run(process_index: int, args, data_dir):
         nbh_frequencies[nbh] += 1
 
     print("Experiment took %f s., swaps done: %d" % (time.time() - start_time, total_swaps))
+
+    if args.profile:
+        yappi.stop()
+        yappi_stats = yappi.get_func_stats()
+        yappi_stats.sort("tsub")
+        yappi_stats.save(os.path.join(data_dir, "yappi_%d.stats" % process_index), type='callgrind')
 
     # Write away the results
     with open(os.path.join(data_dir, "frequencies_%d.csv" % process_index), "w") as out_file:
