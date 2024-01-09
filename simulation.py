@@ -26,6 +26,8 @@ class Simulation:
 
         self.G = G or random_regular_graph(self.args.k, self.args.nodes, seed=42)
 
+        np.random.seed()  # Make sure our runs are random
+
     def generate_inter_arrival_times(self):
         return np.random.exponential(scale=1 / self.args.poisson_rate)
 
