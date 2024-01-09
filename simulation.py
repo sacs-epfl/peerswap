@@ -1,5 +1,5 @@
 import heapq
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 import numpy as np
 from networkx import random_regular_graph
@@ -12,7 +12,7 @@ class Simulation:
     def __init__(self, args, G = None):
         self.args = args
         self.current_time: float = 0
-        self.events: List[Event] = []
+        self.events: List[Tuple[float, Event]] = []
         self.swaps: int = 0
         self.nb_frequencies: List[int] = [0] * self.args.nodes
         self.node_to_track: int = 0
@@ -30,7 +30,7 @@ class Simulation:
         return np.random.exponential(scale=1 / self.args.poisson_rate)
 
     def schedule(self, event: Event):
-        heapq.heappush(self.events, event)
+        heapq.heappush(self.events, (event.time, event))
 
     def get_neighbour_of_tracked_node(self):
         return tuple(sorted([self.vertex_to_node_map[nb_vertex] for nb_vertex in list(self.G.neighbors(self.node_to_vertex_map[self.node_to_track]))]))
@@ -60,8 +60,8 @@ class Simulation:
             self.schedule(event)
 
         while self.events:
-            event = heapq.heappop(self.events)
-            self.current_time = event.time
+            event_time, event = heapq.heappop(self.events)
+            self.current_time = event_time
             if self.current_time >= self.args.time_per_run:
                 break
             self.process_event(event)
