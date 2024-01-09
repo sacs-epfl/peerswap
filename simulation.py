@@ -9,7 +9,7 @@ from event import Event
 
 class Simulation:
 
-    def __init__(self, args):
+    def __init__(self, args, G = None):
         self.args = args
         self.current_time: float = 0
         self.events: List[Event] = []
@@ -24,8 +24,7 @@ class Simulation:
             self.vertex_to_node_map[i] = i
             self.node_to_vertex_map[i] = i
 
-        # Create the topology
-        self.G = random_regular_graph(self.args.k, self.args.nodes, seed=42)
+        self.G = G or random_regular_graph(self.args.k, self.args.nodes, seed=42)
 
     def generate_inter_arrival_times(self):
         return np.random.exponential(scale=1 / self.args.poisson_rate)
