@@ -61,7 +61,7 @@ if __name__ == "__main__":
 
     print("Will start experiments on %d CPUs..." % cpus_to_use)
 
-    data_dir = os.path.join("data", "n_%d_k_%d" % (args.nodes, args.k))
+    data_dir = os.path.join("data", "n_%d_k_%d_t_%g" % (args.nodes, args.k, args.time_per_run))
     if os.path.exists(data_dir):
         shutil.rmtree(data_dir)
     os.makedirs(data_dir, exist_ok=True)
@@ -88,9 +88,9 @@ if __name__ == "__main__":
 
     output_file_name = os.path.join(data_dir, "frequencies.csv")
     with open(output_file_name, "w") as out_file:
-        out_file.write("node,freq\n")
+        out_file.write("algorithm,nodes,k,time_per_run,node,freq\n")
         for node_ind, freq in enumerate(merged_frequencies):
-            out_file.write("%d,%d\n" % (node_ind, freq))
+            out_file.write("swiftpeer,%d,%d,%g,%d,%d\n" % (args.nodes, args.k, args.time_per_run, node_ind, freq))
 
     # Merge neighbourhoods
     merged_nbh_frequencies = defaultdict(lambda: 0)
@@ -106,6 +106,6 @@ if __name__ == "__main__":
 
     output_file_name = os.path.join(data_dir, "nbh_frequencies.csv")
     with open(output_file_name, "w") as out_file:
-        out_file.write("nbh,freq\n")
+        out_file.write("algorithm,nodes,k,time_per_run,nbh,freq\n")
         for nbh, freq in merged_nbh_frequencies.items():
-            out_file.write("%s,%d\n" % ("-".join(["%d" % nb for nb in nbh]), freq))
+            out_file.write("swiftpeer,%d,%d,%g,%s,%d\n" % (args.nodes, args.k, args.time_per_run, "-".join(["%d" % nb for nb in nbh]), freq))
