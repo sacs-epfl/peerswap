@@ -2,7 +2,7 @@ library(ggplot2)
 library(dplyr)
 
 # Frequencies per node
-dat <- read.csv("data/n_50_k_4/frequencies.csv")
+dat <- read.csv("data/n_50_k_4_t_1/frequencies.csv")
 dat <- dat[dat$freq > 0,]
 
 p <- ggplot(dat, aes(x=freq)) +
@@ -14,8 +14,8 @@ p <- ggplot(dat, aes(x=freq)) +
 ggsave("data/node_frequencies_ecdf.pdf", p, width=5, height=3)
 
 # Frequencies per node
-dat <- read.csv("data/n_50_k_4/nbh_frequencies.csv")
-synthetic_file_path <- "data/n_50_k_4/nbh_frequencies_synthetic.csv"
+dat <- read.csv("data/n_50_k_4_t_1/nbh_frequencies.csv")
+synthetic_file_path <- "data/n_50_k_4_t_1/nbh_frequencies_synthetic.csv"
 if (file.exists(synthetic_file_path)) {
   dat_synthetic <- read.csv(synthetic_file_path)
   dat <- rbind(dat, dat_synthetic)

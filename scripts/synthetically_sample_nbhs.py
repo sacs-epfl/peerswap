@@ -4,7 +4,8 @@ from collections import defaultdict
 
 N = 50
 K = 4
-RUNS = 54000000
+T = 1
+RUNS = 50000000
 
 freqs = defaultdict(lambda: 0)
 for run in range(RUNS):
@@ -15,8 +16,8 @@ for run in range(RUNS):
     freqs[nbh] += 1
 
 # Write away the frequencies
-with open(os.path.join("data", "n_%d_k_%d" % (N, K), "nbh_frequencies_synthetic.csv"), "w") as out_file:
-    out_file.write("algorithm,nbh,freq\n")
+with open(os.path.join("data", "n_%d_k_%d_t_%g" % (N, K, T), "nbh_frequencies_synthetic.csv"), "w") as out_file:
+    out_file.write("algorithm,nodes,k,time_per_run,nbh,freq\n")
     for nbh, freq in freqs.items():
         nbh_str = "-".join(["%d" % peer for peer in nbh])
-        out_file.write("synthetic,%s,%d\n" % (nbh_str, freq))
+        out_file.write("synthetic,%d,%d,%g,%s,%d\n" % (N, K, T, nbh_str, freq))
