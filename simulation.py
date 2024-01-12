@@ -24,7 +24,7 @@ class Simulation:
             self.vertex_to_node_map[i] = i
             self.node_to_vertex_map[i] = i
 
-        self.G = G or random_regular_graph(self.args.k, self.args.nodes, seed=42)
+        self.G = G or random_regular_graph(self.args.k, self.args.nodes, seed=self.args.seed)
 
         np.random.seed()  # Make sure our runs are random
 

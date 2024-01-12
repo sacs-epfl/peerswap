@@ -8,6 +8,7 @@ def get_args():
     parser.add_argument("--time-per-run", type=int, default=7)
     parser.add_argument("--poisson-rate", type=int, default=1.0)
     parser.add_argument("--k", type=int, default=7)
+    parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--cpus", type=int, default=None)
     parser.add_argument('--profile', action='store_true')
 
