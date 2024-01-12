@@ -1,4 +1,5 @@
 import csv
+import logging
 import multiprocessing
 import os
 import shutil
@@ -14,6 +15,9 @@ from args import get_args
 from simulation import Simulation
 
 
+logging.basicConfig(level=logging.INFO)
+
+
 def run(process_index: int, args, data_dir):
     if args.profile:
         yappi.start(builtins=True)
@@ -24,8 +28,8 @@ def run(process_index: int, args, data_dir):
     start_time = time.time()
     G = random_regular_graph(args.k, args.nodes, seed=42)
     for run_index in range(args.runs_per_process):
-        if run_index % 100000 == 0:
-            print("Process %d completed %d runs..." % (process_index, run_index))
+        if run_index % 10000 == 0:
+            logging.info("Process %d completed %d runs..." % (process_index, run_index))
 
         simulation = Simulation(args, G)
         simulation.run()

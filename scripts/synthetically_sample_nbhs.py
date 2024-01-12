@@ -2,10 +2,10 @@ import os
 import random
 from collections import defaultdict
 
-N = 1000
-K = 7
-T = 7
-RUNS = 50000
+N = 64
+K = 4
+T = 1
+RUNS = 50 * 100000
 
 nbh_freqs = defaultdict(lambda: 0)
 node_freqs = defaultdict(lambda: 0)

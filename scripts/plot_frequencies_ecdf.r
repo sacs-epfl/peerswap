@@ -2,8 +2,8 @@ library(ggplot2)
 library(dplyr)
 
 # Frequencies per node
-dat <- read.csv("data/n_1000_k_7_t_7/frequencies.csv")
-synthetic_file_path <- "data/n_1000_k_7_t_7/frequencies_synthetic.csv"
+dat <- read.csv("data/n_64_k_4_t_1/frequencies.csv")
+synthetic_file_path <- "data/n_64_k_4_t_1/frequencies_synthetic.csv"
 if (file.exists(synthetic_file_path)) {
   dat_synthetic <- read.csv(synthetic_file_path)
   dat <- rbind(dat, dat_synthetic)
@@ -21,10 +21,12 @@ p <- ggplot(dat, aes(x=freq, group=group, color=group, linetype=group)) +
 ggsave("data/node_frequencies_ecdf.pdf", p, width=5, height=3)
 
 # Frequencies per node
-dat <- read.csv("data/n_50_k_4_t_1/nbh_frequencies.csv")
-synthetic_file_path <- "data/n_50_k_4_t_1/nbh_frequencies_synthetic.csv"
+dat <- read.csv("data/n_64_k_4_t_1/nbh_frequencies.csv")
+print(max(dat$freq))
+synthetic_file_path <- "data/n_64_k_4_t_1/nbh_frequencies_synthetic.csv"
 if (file.exists(synthetic_file_path)) {
   dat_synthetic <- read.csv(synthetic_file_path)
+  print(max(dat_synthetic$freq))
   dat <- rbind(dat, dat_synthetic)
 }
 
