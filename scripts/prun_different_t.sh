@@ -1,7 +1,11 @@
 #!/bin/bash
 
 # Maximum number of concurrent jobs
+nodes=64
+k=4
 max_jobs=16
+cpus=60
+runs_per_proc=992775
 
 # Array to hold all the commands
 declare -a commands
@@ -12,7 +16,7 @@ do
     for ((t=1; t <= 4; t++ ))
     do
         # Add command to the array
-        commands+=("prun -t 24:00:00 -np 1 -o out.log bash run.sh 64 4 $t 60 992775 $s")
+        commands+=("prun -t 24:00:00 -np 1 -o out.log bash run.sh $nodes $k $t $cpus $runs_per_proc $s")
     done
 done
 

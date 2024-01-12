@@ -1,4 +1,5 @@
 import csv
+import glob
 import logging
 import multiprocessing
 import os
@@ -92,6 +93,7 @@ if __name__ == "__main__":
             for row in reader:
                 node_id, freq = int(row[0]), int(row[1])
                 merged_frequencies[node_id] += freq
+        os.remove(input_file)
 
     output_file_name = os.path.join(data_dir, "frequencies.csv")
     with open(output_file_name, "w") as out_file:
@@ -110,6 +112,7 @@ if __name__ == "__main__":
                 nbh, freq = row[0], int(row[1])
                 nbh = tuple([int(part) for part in nbh.split("-")])
                 merged_nbh_frequencies[nbh] += freq
+        os.remove(input_file)
 
     output_file_name = os.path.join(data_dir, "nbh_frequencies.csv")
     with open(output_file_name, "w") as out_file:
