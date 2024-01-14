@@ -2,8 +2,8 @@ library(ggplot2)
 library(dplyr)
 
 # Example: Generating directory names manually
-directories <- c("n_4096_k_5_t_1_s_42", "n_4096_k_5_t_2_s_42", "n_4096_k_5_t_3_s_42", "n_4096_k_5_t_4_s_42", "n_4096_k_5_t_5_s_42")
-file_paths <- paste0("data/", directories, "/frequencies.csv")
+directories <- c("n_4096_k_5_t_1_s_42", "n_4096_k_5_t_1.5_s_42", "n_4096_k_5_t_2_s_42", "n_4096_k_5_t_3_s_42", "n_4096_k_5_t_4_s_42")
+file_paths <- paste0("data/exp2/", directories, "/frequencies.csv")
 merged_data <- data.frame()
 for (file_path in file_paths) {
     print(file_path)
