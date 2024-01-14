@@ -2,7 +2,11 @@ library(ggplot2)
 library(dplyr)
 
 # Example: Generating directory names manually
-directories <- c("n_4096_k_5_t_1_s_42", "n_4096_k_5_t_1.5_s_42", "n_4096_k_5_t_2_s_42", "n_4096_k_5_t_3_s_42", "n_4096_k_5_t_4_s_42")
+directories <- c("n_4096_k_5_t_1_s_42", "n_4096_k_5_t_1.5_s_42", "n_4096_k_5_t_2_s_42", "n_4096_k_5_t_3_s_42", "n_4096_k_5_t_4_s_42",
+                 "n_4096_k_5_t_1_s_43", "n_4096_k_5_t_1.5_s_43", "n_4096_k_5_t_2_s_43", "n_4096_k_5_t_3_s_43", "n_4096_k_5_t_4_s_43",
+                 "n_4096_k_5_t_1_s_44", "n_4096_k_5_t_1.5_s_44", "n_4096_k_5_t_2_s_44", "n_4096_k_5_t_3_s_44", "n_4096_k_5_t_4_s_44",
+                 "n_4096_k_5_t_1_s_45", "n_4096_k_5_t_1.5_s_45", "n_4096_k_5_t_2_s_45", "n_4096_k_5_t_3_s_45", "n_4096_k_5_t_4_s_45",
+                 "n_4096_k_5_t_1_s_46", "n_4096_k_5_t_1.5_s_46", "n_4096_k_5_t_2_s_46", "n_4096_k_5_t_3_s_46", "n_4096_k_5_t_4_s_46")
 file_paths <- paste0("data/exp2/", directories, "/frequencies.csv")
 merged_data <- data.frame()
 for (file_path in file_paths) {
