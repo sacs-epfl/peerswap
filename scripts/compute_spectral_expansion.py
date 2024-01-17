@@ -23,11 +23,25 @@ def compute_spectral_expansion(G):
     lambda_max = abs(eigenvalues[0])
     return lambda_max
 
+expansions = []
+for seed in range(1, 1000000):
+    G = nx.random_regular_graph(k, n, seed=seed)
 
-G = nx.random_regular_graph(k, n, seed=42)
+    if seed % 10000 == 0:
+        print("Computed %d seeds..." % seed)
 
-# Compute T
-l = compute_spectral_expansion(G)
-print("Spectral expansion: %f" % l)
-T = log(n / epsilon, 2) / (k * l)
-print("T: %f" % T)
+    # Compute T
+    l = compute_spectral_expansion(G)
+    expansions.append((l, seed))
+    #print("Spectral expansion: %f" % l)
+    # T = log(n / epsilon, 2) / (k * l)
+    # print("T: %f" % T)
+
+samples = 100
+expansions = sorted(expansions)
+step = (len(expansions) - 1) / (samples - 1)
+selected_expansions = [expansions[int(i * step)] for i in range(samples)]
+with open("spectral_expansion_graphs.csv", "w") as out_file:
+    out_file.write("seed,lambda\n")
+    for l, seed in selected_expansions:
+        out_file.write("%d,%f\n" % (seed, l))
