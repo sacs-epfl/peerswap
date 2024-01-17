@@ -140,4 +140,4 @@ if __name__ == "__main__":
         for tracked_node, nbhs in merged_nbh_frequencies.items():
             for nbh, freq in nbhs.items():
                 nbh_str = "-".join(["%d" % nb for nb in nbh])
-                out_file.write("swiftpeer,%d,%d,%g,%d,%s,%d\n" % (args.nodes, args.k, args.time_per_run, args.seed, nbh_str, freq))
+                out_file.write("swiftpeer,%d,%d,%g,%d,%d,%s,%d\n" % (args.nodes, args.k, args.time_per_run, args.seed, tracked_node, nbh_str, freq))
