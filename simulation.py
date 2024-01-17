@@ -34,8 +34,14 @@ class Simulation:
     def schedule(self, event: Event):
         heapq.heappush(self.events, (event.time, event))
 
-    def get_neighbour_of_tracked_node(self):
-        return tuple(sorted([self.vertex_to_node_map[nb_vertex] for nb_vertex in list(self.G.neighbors(self.node_to_vertex_map[self.node_to_track]))]))
+    def get_neighbour_of_tracked_nodes(self):
+        if not self.args.track_all_nodes:
+            return {0: tuple(sorted([self.vertex_to_node_map[nb_vertex] for nb_vertex in list(self.G.neighbors(self.node_to_vertex_map[self.node_to_track]))]))}
+        else:
+            res = {}
+            for node in range(self.args.nodes):
+                res[node] = tuple(sorted([self.vertex_to_node_map[nb_vertex] for nb_vertex in list(self.G.neighbors(self.node_to_vertex_map[node]))]))
+            return res
 
     def process_event(self, event: Event):
         #print("[t=%.2f] Activating edge (%d - %d)" % (self.current_time, event.from_vertex, event.to_vertex))

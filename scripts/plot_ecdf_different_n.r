@@ -3,7 +3,7 @@ library(dplyr)
 
 # Example: Generating directory names manually
 directories <- c()
-for (n in c(1024, 2048, 4096, 8192, 16382)) {
+for (n in c(2048, 4096, 8192, 16384, 32768)) {
     for (s in 42:46) {
         directory_name <- paste("n_", n, "_k_5_t_5_s_", s, sep = "")
         directories <- c(directories, directory_name)
@@ -30,6 +30,6 @@ p <- ggplot(merged_data, aes(x=freq, group=nodes, color=nodes, linetype=nodes)) 
      theme_bw() +
      xlab("Peer Frequency") +
      ylab("ECDF") +
-     theme(legend.position=c(0.82, 0.4), legend.box.background = element_rect(colour = "black"))
+     theme(legend.position=c(0.84, 0.43), legend.box.background = element_rect(colour = "black"))
 
 ggsave("data/exp3/nodes_frequencies_different_n_ecdf.pdf", p, width=4, height=2.5)

@@ -7,7 +7,7 @@ import shutil
 import time
 from collections import defaultdict
 from multiprocessing import Process
-from typing import List
+from typing import List, Dict, Tuple
 
 import yappi
 from networkx import random_regular_graph
@@ -24,8 +24,16 @@ def run(process_index: int, args, data_dir):
         yappi.start(builtins=True)
 
     total_swaps: int = 0
-    nb_frequencies: List[int] = [0] * args.nodes
-    nbh_frequencies = defaultdict(lambda: 0)
+    nb_frequencies: Dict[int, List[int]] = {}
+    nbh_frequencies: Dict[int, Dict[Tuple[int], int]] = {}
+    if args.track_all_nodes:
+        for node in range(args.nodes):
+            nb_frequencies[node] = [0] * args.nodes
+            nbh_frequencies[node] = defaultdict(lambda: 0)
+    else:
+        nb_frequencies = {0: [0] * args.nodes}
+        nbh_frequencies = {0: defaultdict(lambda: 0)}
+
     start_time = time.time()
     G = random_regular_graph(args.k, args.nodes, seed=args.seed)
     for run_index in range(args.runs_per_process):
@@ -36,10 +44,11 @@ def run(process_index: int, args, data_dir):
         simulation.run()
         total_swaps += simulation.swaps
 
-        nbh = simulation.get_neighbour_of_tracked_node()
-        for nb in nbh:
-            nb_frequencies[nb] += 1
-        nbh_frequencies[nbh] += 1
+        nbhs = simulation.get_neighbour_of_tracked_nodes()
+        for node, nbh in nbhs.items():
+            for nb in nbh:
+                nb_frequencies[node][nb] += 1
+            nbh_frequencies[node][nbh] += 1
 
     print("Experiment took %f s., swaps done: %d" % (time.time() - start_time, total_swaps))
 
@@ -51,14 +60,17 @@ def run(process_index: int, args, data_dir):
 
     # Write away the results
     with open(os.path.join(data_dir, "frequencies_%d.csv" % process_index), "w") as out_file:
-        out_file.write("node,freq\n")
-        for node_id, freq in enumerate(nb_frequencies):
-            out_file.write("%d,%d\n" % (node_id, freq))
+        out_file.write("tracked_node,node,freq\n")
+        for tracked_node, nbhs in nb_frequencies.items():
+            for node_id, freq in enumerate(nbhs):
+                out_file.write("%d,%d,%d\n" % (tracked_node, node_id, freq))
 
     with open(os.path.join(data_dir, "nbh_frequencies_%d.csv" % process_index), "w") as out_file:
-        out_file.write("neighbourhood,freq\n")
-        for neighbourhood, freq in nbh_frequencies.items():
-            out_file.write("%s,%d\n" % ("-".join(["%d" % nb for nb in neighbourhood]), freq))
+        out_file.write("tracked_node,neighbourhood,freq\n")
+        for tracked_node, nbhs in nbh_frequencies.items():
+            for neighbourhood, freq in nbhs.items():
+                nbh_str = "-".join(["%d" % nb for nb in neighbourhood])
+                out_file.write("%d,%s,%d\n" % (tracked_node,nbh_str, freq))
 
 
 if __name__ == "__main__":
@@ -84,38 +96,48 @@ if __name__ == "__main__":
         p.join()
 
     print("Processes done - combining results")
-    merged_frequencies: List[int] = [0] * args.nodes
+
+    # Merge node frequencies
+    merged_frequencies: Dict[int, List[int]] = {}
     input_files = [os.path.join(data_dir, "frequencies_%d.csv" % process_index) for process_index in range(cpus_to_use)]
     for input_file in input_files:
         with open(input_file, "r") as in_file:
             reader = csv.reader(in_file)
             next(reader)  # Skip the header
             for row in reader:
-                node_id, freq = int(row[0]), int(row[1])
-                merged_frequencies[node_id] += freq
+                tracked_node, node_id, freq = int(row[0]), int(row[1]), int(row[2])
+                if tracked_node not in merged_frequencies:
+                    merged_frequencies[tracked_node] = [0] * args.nodes
+                merged_frequencies[tracked_node][node_id] += freq
         os.remove(input_file)
 
     output_file_name = os.path.join(data_dir, "frequencies.csv")
     with open(output_file_name, "w") as out_file:
-        out_file.write("algorithm,nodes,k,time_per_run,seed,node,freq\n")
-        for node_ind, freq in enumerate(merged_frequencies):
-            out_file.write("swiftpeer,%d,%d,%g,%d,%d,%d\n" % (args.nodes, args.k, args.time_per_run, args.seed, node_ind, freq))
+        out_file.write("algorithm,nodes,k,time_per_run,seed,tracked_node,node,freq\n")
+        for tracked_node, freqs in merged_frequencies.items():
+            for node_ind, freq in enumerate(freqs):
+                out_file.write("swiftpeer,%d,%d,%g,%d,%d,%d,%d\n" % (args.nodes, args.k, args.time_per_run, args.seed, tracked_node, node_ind, freq))
 
     # Merge neighbourhoods
-    merged_nbh_frequencies = defaultdict(lambda: 0)
+    merged_nbh_frequencies: Dict[int, Dict[Tuple[int], int]] = {}
     input_files = [os.path.join(data_dir, "nbh_frequencies_%d.csv" % process_index) for process_index in range(cpus_to_use)]
     for input_file in input_files:
         with open(input_file, "r") as in_file:
             reader = csv.reader(in_file)
             next(reader)  # Skip the header
             for row in reader:
-                nbh, freq = row[0], int(row[1])
+                tracked_node, nbh, freq = int(row[0]), row[1], int(row[2])
+                if tracked_node not in merged_nbh_frequencies:
+                    merged_nbh_frequencies[tracked_node] = defaultdict(lambda: 0)
+
                 nbh = tuple([int(part) for part in nbh.split("-")])
-                merged_nbh_frequencies[nbh] += freq
+                merged_nbh_frequencies[tracked_node][nbh] += freq
         os.remove(input_file)
 
     output_file_name = os.path.join(data_dir, "nbh_frequencies.csv")
     with open(output_file_name, "w") as out_file:
-        out_file.write("algorithm,nodes,k,time_per_run,seed,nbh,freq\n")
-        for nbh, freq in merged_nbh_frequencies.items():
-            out_file.write("swiftpeer,%d,%d,%g,%d,%s,%d\n" % (args.nodes, args.k, args.time_per_run, args.seed, "-".join(["%d" % nb for nb in nbh]), freq))
+        out_file.write("algorithm,nodes,k,time_per_run,seed,tracked_node,nbh,freq\n")
+        for tracked_node, nbhs in merged_nbh_frequencies.items():
+            for nbh, freq in nbhs.items():
+                nbh_str = "-".join(["%d" % nb for nb in nbh])
+                out_file.write("swiftpeer,%d,%d,%g,%d,%s,%d\n" % (args.nodes, args.k, args.time_per_run, args.seed, nbh_str, freq))
