@@ -20,7 +20,7 @@ def compute_spectral_expansion(G):
     return lambda_max
 
 
-SEEDS = [451221, 96032]
+SEEDS = [451221, 421462, 884124, 534785, 556343, 519038, 688720, 510637, 343170, 96032]
 N = 64
 K = 4
 synthetic_freqs = []
@@ -53,11 +53,11 @@ for seed in SEEDS:
 
             tracked_node = int(row[5])
             if tracked_node != node_evaluated:
-                node_evaluated = tracked_node
                 kstest_results = kstest(synthetic_freqs, freqs)
                 freqs = []
                 with open(ks_results_file, "a") as results_file:
-                    results_file.write("%d,%f,%d,%f,%f\n" % (seed, l, tracked_node, kstest_results.statistic, kstest_results.pvalue))
+                    results_file.write("%d,%f,%d,%f,%f\n" % (seed, l, node_evaluated, kstest_results.statistic, kstest_results.pvalue))
+                node_evaluated = tracked_node
 
             freq = int(row[-1])
             freqs.append(freq)
