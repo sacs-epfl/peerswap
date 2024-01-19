@@ -40,23 +40,22 @@ for (file_path in file_paths) {
 
 print("SD of synthetic data")
 print(sd(synthetic_data$freq))
-filtered_data <- merged_data[merged_data$t == 3,]
-print("SD of emperical data (t=3)")
-print(sd(filtered_data$freq))
-print(ks.test(filtered_data$freq, synthetic_data$freq))
-filtered_data <- merged_data[merged_data$t == 4,]
-print("SD of emperical data (t=4)")
-print(sd(filtered_data$freq))
-print(ks.test(filtered_data$freq, synthetic_data$freq))
+for (t in 3:4) {
+    filtered_data <- merged_data[merged_data$t == t,]
+    for (s in 42:46) {
+        further_filtered <- filtered_data[filtered_data$seed == s,]
+        print(ks.test(further_filtered$freq, synthetic_data$freq))
+    }
+}
 
 p <- ggplot(merged_data, aes(x=freq, group=time_per_run, color=time_per_run, linetype=time_per_run)) +
      stat_ecdf() +
      coord_cartesian(xlim=c(NA, 200)) +
-     scale_color_discrete(name = "Runtime [s.]") +
-     scale_linetype_discrete(name = "Runtime [s.]") +
+     scale_color_discrete(name = "Experiment Duration [s.]") +
+     scale_linetype_discrete(name = "Experiment Duration [s.]") +
      theme_bw() +
-     xlab("Neighbourhood Frequency") +
+     xlab("Neighborhood Frequency") +
      ylab("ECDF") +
-     theme(legend.position=c(0.8, 0.4), legend.box.background = element_rect(colour = "black"))
+     theme(legend.position="top", legend.margin=margin(t = 0, unit='cm'))
 
-ggsave("data/exp1/nbh_frequencies_different_t_ecdf.pdf", p, width=4, height=2.5)
+ggsave("data/exp1/nbh_frequencies_different_t_ecdf.pdf", p, width=4.5, height=2.3)

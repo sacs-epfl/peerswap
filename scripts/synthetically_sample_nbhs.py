@@ -3,12 +3,12 @@ import random
 import shutil
 from collections import defaultdict
 
-N = 64
+N = 8192 * 4
 K = 4
-T = 1
-RUNS = 595665 * 100
+T = 4
+RUNS = N * 100 // K
 
-for seed in range(46, 47):
+for seed in range(42, 43):
     print("Running for seed %d..." % seed)
     nbh_freqs = defaultdict(lambda: 0)
     node_freqs = defaultdict(lambda: 0)
