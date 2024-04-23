@@ -1,5 +1,5 @@
 import heapq
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 import numpy as np
 from networkx import random_regular_graph
@@ -9,10 +9,10 @@ from event import Event
 
 class Simulation:
 
-    def __init__(self, args):
+    def __init__(self, args, G = None):
         self.args = args
         self.current_time: float = 0
-        self.events: List[Event] = []
+        self.events: List[Tuple[float, Event]] = []
         self.swaps: int = 0
         self.nb_frequencies: List[int] = [0] * self.args.nodes
         self.node_to_track: int = 0
@@ -24,19 +24,24 @@ class Simulation:
             self.vertex_to_node_map[i] = i
             self.node_to_vertex_map[i] = i
 
-        # Create the topology
-        self.G = random_regular_graph(self.args.k, self.args.nodes, seed=42)
+        self.G = G or random_regular_graph(self.args.k, self.args.nodes, seed=self.args.seed)
+
+        np.random.seed()  # Make sure our runs are random
 
     def generate_inter_arrival_times(self):
         return np.random.exponential(scale=1 / self.args.poisson_rate)
 
     def schedule(self, event: Event):
-        heapq.heappush(self.events, event)
+        heapq.heappush(self.events, (event.time, event))
 
-    def register_neighbours_of_tracked_node(self):
-        for nb_vertex in self.G.neighbors(self.node_to_vertex_map[self.node_to_track]):
-            nb_peer = self.vertex_to_node_map[nb_vertex]
-            self.nb_frequencies[nb_peer] += 1
+    def get_neighbour_of_tracked_nodes(self):
+        if not self.args.track_all_nodes:
+            return {0: tuple(sorted([self.vertex_to_node_map[nb_vertex] for nb_vertex in list(self.G.neighbors(self.node_to_vertex_map[self.node_to_track]))]))}
+        else:
+            res = {}
+            for node in range(self.args.nodes):
+                res[node] = tuple(sorted([self.vertex_to_node_map[nb_vertex] for nb_vertex in list(self.G.neighbors(self.node_to_vertex_map[node]))]))
+            return res
 
     def process_event(self, event: Event):
         #print("[t=%.2f] Activating edge (%d - %d)" % (self.current_time, event.from_vertex, event.to_vertex))
@@ -63,10 +68,8 @@ class Simulation:
             self.schedule(event)
 
         while self.events:
-            event = heapq.heappop(self.events)
-            self.current_time = event.time
+            event_time, event = heapq.heappop(self.events)
+            self.current_time = event_time
             if self.current_time >= self.args.time_per_run:
                 break
             self.process_event(event)
-
-        self.register_neighbours_of_tracked_node()
