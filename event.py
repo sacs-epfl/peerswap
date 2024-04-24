@@ -4,8 +4,12 @@ from typing import Dict
 CLOCK_FIRE = "clock_fire"
 LOCK_REQUEST = "lock_request"
 LOCK_RESPONSE = "lock_response"
+UNLOCK = "unlock"
 SWAP = "swap"
+SWAP_FAIL = "swap_fail"
 REPLACE = "replace"
+STOP_CLOCKS = "stop_clocks"
+STOP = "stop"
 
 
 class Event:

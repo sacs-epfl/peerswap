@@ -12,11 +12,14 @@ class Peer:
         self.other_nbs: Optional[Set[int]] = None
         self.ready_for_swap: bool = False
         self.other_ready_for_swap: bool = False
-        self.lock_responses_sent: int = 0
+        self.lock_responses_sent: List[int] = []
         self.lock_responses_received: int = 0
 
     def is_locked(self) -> bool:
         return self.locked_by is not None
+
+    def in_swap(self) -> bool:
+        return self.ongoing_swap is not None
 
     def lock(self, locked_by: Tuple[int, int]):
         self.locked_by = locked_by
@@ -29,7 +32,7 @@ class Peer:
         self.other_nbs = None
         self.ready_for_swap = False
         self.other_ready_for_swap = False
-        self.lock_responses_sent = 0
+        self.lock_responses_sent = []
         self.lock_responses_received = 0
 
     def get_edge_nb(self) -> Optional[int]:

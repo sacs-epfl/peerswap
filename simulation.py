@@ -1,12 +1,13 @@
 import bisect
 import heapq
+import random
 from collections import defaultdict
 from typing import List, Tuple, Dict
 
 import numpy as np
 from networkx import random_regular_graph
 
-from event import Event, CLOCK_FIRE, LOCK_REQUEST, LOCK_RESPONSE, SWAP, REPLACE
+from event import Event, CLOCK_FIRE, LOCK_REQUEST, LOCK_RESPONSE, SWAP, REPLACE, UNLOCK, SWAP_FAIL
 from peer import Peer
 
 
@@ -18,8 +19,10 @@ class Simulation:
         self.peers: List[Peer] = []
         self.events: List[Tuple[float, int, Event]] = []
         self.swaps: int = 0
+        self.failed_swaps: int = 0
         self.edge_to_clocks: Dict[Tuple[int, int], int] = {}
         self.clock_to_peers: Dict[int, Tuple[int, int]] = {}
+        self.latencies = {}
 
         heapq.heapify(self.events)
 
@@ -31,6 +34,14 @@ class Simulation:
             peer = Peer(peer_ind, nbs)
             self.peers.append(peer)
 
+        # Generate latencies
+        for from_peer_ind in range(self.args.nodes):
+            for to_peer_ind in range(self.args.nodes):
+                if from_peer_ind == to_peer_ind:
+                    self.latencies[(from_peer_ind, to_peer_ind)] = 0
+                else:
+                    self.latencies[(from_peer_ind, to_peer_ind)] = random.random() * 0.1  # Between 0 and 100 ms
+
         # Statistics
         self.nb_frequencies: List[int] = [0] * self.args.nodes
         self.node_to_track: int = 0
@@ -38,8 +49,7 @@ class Simulation:
         np.random.seed()  # Make sure our runs are random
 
     def get_latency(self, from_peer: int, to_peer: int) -> float:
-        # TODO implement this!
-        return 0.0
+        return 0.001 #self.latencies[(from_peer, to_peer)]
 
     def generate_inter_arrival_times(self):
         return np.random.exponential(scale=1 / self.args.poisson_rate)
@@ -80,9 +90,9 @@ class Simulation:
             assert clock_peers in self.edge_to_clocks, "Edge %s does not have a clock?!" % str(clock_peers)
 
     def process_event(self, event: Event):
-        # print(event)
+        print(event)
         if event.type == CLOCK_FIRE:
-            self.sanity_check()
+            # self.sanity_check()
             self.handle_clock_fire(event)
         elif event.type == LOCK_REQUEST:
             self.handle_lock_request(event)
@@ -90,8 +100,12 @@ class Simulation:
             self.handle_lock_response(event)
         elif event.type == SWAP:
             self.handle_swap(event)
+        elif event.type == SWAP_FAIL:
+            self.handle_swap_fail(event)
         elif event.type == REPLACE:
             self.handle_replace(event)
+        elif event.type == UNLOCK:
+            self.handle_unlock(event)
         else:
             raise RuntimeError("Unknown event %s" % event.type)
 
@@ -99,15 +113,25 @@ class Simulation:
         # Lock yourself and send out a lock request
         clock_ind: int = event.data["clock"]
         peer_tup: Tuple[int, int] = self.clock_to_peers[clock_ind]
+        print("Will start swap: %s" % str(peer_tup))
 
-        # Make sure they are actually neighbors (to make sure we haven't messed up the clock)
-        assert peer_tup[0] in self.peers[peer_tup[1]].nbs, "Peer %d not nb of %d" % (peer_tup[0], peer_tup[1])
-        assert peer_tup[1] in self.peers[peer_tup[0]].nbs, "Peer %d not nb of %d" % (peer_tup[1], peer_tup[0])
+        num_locked = 0
+        for peer in self.peers:
+            if peer.is_locked():
+                num_locked += 1
+        print(num_locked)
 
         for peer_ind in peer_tup:
             peer: Peer = self.peers[peer_ind]
             if peer.is_locked():
                 print("Peer %d already locked, swap failed :(" % peer_ind)
+
+                other_peer_ind: int = peer_tup[0] if peer_tup[0] != peer_ind else peer_tup[1]
+                data = {"from": peer.index, "to": other_peer_ind}
+                swap_fail_event = Event(self.current_time + self.get_latency(peer.index, other_peer_ind), SWAP_FAIL, data)
+                self.schedule(swap_fail_event)
+
+                self.failed_swaps += 1
                 continue
 
             # Peer is not locked - lock it and send out lock requests
@@ -116,7 +140,6 @@ class Simulation:
             peer.ready_for_swap = False
             peer.other_nbs = False
             peer.lock(peer_tup)
-            peer.lock_responses_sent = len(peer.nbs) - 1  # Don't send to the edge buddy
             peer.lock_responses_received = 0
             for nb_peer_ind in peer.nbs:
                 if nb_peer_ind in peer_tup:
@@ -125,6 +148,7 @@ class Simulation:
                 data = {"from": peer_ind, "to": nb_peer_ind, "edge": peer.ongoing_swap}
                 lock_request_event: Event = Event(self.current_time + self.get_latency(peer_ind, nb_peer_ind), LOCK_REQUEST, data)
                 self.schedule(lock_request_event)
+                peer.lock_responses_sent.append(nb_peer_ind)
 
         # Schedule new edge activation
         delay = self.generate_inter_arrival_times()
@@ -153,16 +177,31 @@ class Simulation:
         to_peer_ind: int = event.data["to"]
         me: Peer = self.peers[to_peer_ind]
 
-        assert me.lock_responses_sent > 0
+        if not me.in_swap():  # It could be that a lock response is received after another peer already responded negatively
+            return
+
         if not event.data["success"]:
             # Oh no, one peer couldn't lock! Abort everything
-            print("Abort everything")
-            a = 1 / 0
+            print("Received negative lock response from %d (I'm %d)" % (from_peer_ind, to_peer_ind))
+            print("Abort everything: %s" % me.lock_responses_sent)
+
+            for nb_peer_ind in me.lock_responses_sent:
+                data = {"from": me.index, "to": nb_peer_ind}
+                unlock_event: Event = Event(self.current_time + self.get_latency(me.index, nb_peer_ind), UNLOCK, data)
+                self.schedule(unlock_event)
+
+            data = {"from": to_peer_ind, "to": me.get_edge_nb()}
+            swap_fail_event = Event(self.current_time + self.get_latency(me.index, me.get_edge_nb()), SWAP_FAIL, data)
+            self.schedule(swap_fail_event)
+
+            me.unlock()
+            me.reset_from_swap()
+
             return
 
         # Otherwise, proceed with the swap by letting the other party know about our readyness
         me.lock_responses_received += 1
-        if me.lock_responses_received == me.lock_responses_sent:
+        if me.lock_responses_received == len(me.lock_responses_sent):
             # print("All neighbours locked - we can proceed with the swap!")
             me.ready_for_swap = True
 
@@ -184,6 +223,16 @@ class Simulation:
 
         if me.ready_for_swap and me.other_ready_for_swap:
             self.do_swap(me)
+
+    def handle_swap_fail(self, event: Event):
+        to_peer_ind: int = event.data["to"]
+        me: Peer = self.peers[to_peer_ind]
+        for nb_peer_ind in me.lock_responses_sent:
+            data = {"from": me.index, "to": nb_peer_ind}
+            unlock_event: Event = Event(self.current_time + self.get_latency(me.index, nb_peer_ind), UNLOCK, data)
+            self.schedule(unlock_event)
+        me.unlock()
+        me.reset_from_swap()
 
     def do_swap(self, me: Peer):
         # Send replace messages to the neighbors
@@ -222,6 +271,11 @@ class Simulation:
             me.nbs.add(event.data["replace"])
         me.unlock()
 
+    def handle_unlock(self, event: Event):
+        to_peer_ind: int = event.data["to"]
+        me: Peer = self.peers[to_peer_ind]
+        me.unlock()
+
     def run(self):
         # Create the initial events in the queue, for each edge
         for ind, edge in enumerate(self.G.edges):
@@ -242,3 +296,4 @@ class Simulation:
             self.process_event(event)
 
         self.swaps /= 2  # We count every swap twice...
+        print("Failed swaps: %d" % self.failed_swaps)
