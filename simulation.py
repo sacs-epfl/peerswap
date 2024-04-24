@@ -1,6 +1,7 @@
 import bisect
 import heapq
-from typing import List, Tuple, Dict, Set
+from collections import defaultdict
+from typing import List, Tuple, Dict
 
 import numpy as np
 from networkx import random_regular_graph
@@ -17,8 +18,8 @@ class Simulation:
         self.peers: List[Peer] = []
         self.events: List[Tuple[float, int, Event]] = []
         self.swaps: int = 0
-        self.peer_to_clocks: Dict[int, Set[int]] = {}
-        self.clock_to_peers: Dict[int, Set[int]] = {}
+        self.edge_to_clocks: Dict[Tuple[int, int], int] = {}
+        self.clock_to_peers: Dict[int, Tuple[int, int]] = {}
 
         heapq.heapify(self.events)
 
@@ -49,23 +50,37 @@ class Simulation:
 
     def get_neighbour_of_tracked_nodes(self):
         if not self.args.track_all_nodes:
-            return {0: tuple(sorted([self.vertex_to_node_map[nb_vertex] for nb_vertex in list(self.G.neighbors(self.node_to_vertex_map[self.node_to_track]))]))}
+            return {0: tuple(sorted(list(self.peers[0].nbs)))}
         else:
             res = {}
-            for node in range(self.args.nodes):
-                res[node] = tuple(sorted([self.vertex_to_node_map[nb_vertex] for nb_vertex in list(self.G.neighbors(self.node_to_vertex_map[node]))]))
+            for peer_ind in range(self.args.nodes):
+                res[peer_ind] = tuple(sorted(list(self.peers[peer_ind].nbs)))
             return res
 
     def sanity_check(self):
         """
         Check if our current graph is k-regular
         """
+        peer_freqs: Dict[int, int] = defaultdict(lambda: 0)
         for peer in self.peers:
-            print("NBS of peer %d: %s" % (peer.index, peer.nbs))
-            assert len(peer.nbs) == 7, "Peer %s has %d nbs (%s)" % (peer.index, len(peer.nbs), peer.nbs)
+            # print("NBS of peer %d: %s" % (peer.index, peer.nbs))
+            assert len(peer.nbs) == self.args.k, "Peer %s has %d nbs (%s)" % (peer.index, len(peer.nbs), peer.nbs)
+            for nb in peer.nbs:
+                peer_freqs[nb] += 1
+
+        # Check how many times each peer appears in
+        assert all([freq == self.args.k for freq in peer_freqs.values()]), "Peer frequencies uneven: %s" % peer_freqs
+
+        # Check if all the clocks are consistent
+        for clock_ind, clock_peers in self.clock_to_peers.items():
+            assert len(clock_peers) == 2
+            p1_ind, p2_ind = clock_peers[0], clock_peers[1]
+            assert p1_ind in self.peers[p2_ind].nbs, "<CLOCK INC> Peer %d not nb of %d" % (p1_ind, p2_ind)
+            assert p2_ind in self.peers[p1_ind].nbs, "<CLOCK INC> Peer %d not nb of %d" % (p2_ind, p1_ind)
+            assert clock_peers in self.edge_to_clocks, "Edge %s does not have a clock?!" % str(clock_peers)
 
     def process_event(self, event: Event):
-        print(event)
+        # print(event)
         if event.type == CLOCK_FIRE:
             self.sanity_check()
             self.handle_clock_fire(event)
@@ -83,7 +98,7 @@ class Simulation:
     def handle_clock_fire(self, event: Event):
         # Lock yourself and send out a lock request
         clock_ind: int = event.data["clock"]
-        peer_tup: Tuple[int, int] = tuple(sorted(list(self.clock_to_peers[clock_ind])))
+        peer_tup: Tuple[int, int] = self.clock_to_peers[clock_ind]
 
         # Make sure they are actually neighbors (to make sure we haven't messed up the clock)
         assert peer_tup[0] in self.peers[peer_tup[1]].nbs, "Peer %d not nb of %d" % (peer_tup[0], peer_tup[1])
@@ -122,7 +137,6 @@ class Simulation:
         me: Peer = self.peers[to_peer_ind]
         if me.is_locked() and from_peer_ind not in me.locked_by:
             # Bummer, we have to politely refuse the lock
-            print("REFUSE")
             data = {"from": to_peer_ind, "to": from_peer_ind, "success": False}
             lock_response_event: Event = Event(self.current_time + self.get_latency(to_peer_ind, from_peer_ind), LOCK_RESPONSE, data)
             self.schedule(lock_response_event)
@@ -149,12 +163,11 @@ class Simulation:
         # Otherwise, proceed with the swap by letting the other party know about our readyness
         me.lock_responses_received += 1
         if me.lock_responses_received == me.lock_responses_sent:
-            print("All neighbours locked - we can proceed with the swap!")
+            # print("All neighbours locked - we can proceed with the swap!")
             me.ready_for_swap = True
 
             # Send the swap message to the other end of the activated edge
             edge_nb_ind: int = me.get_edge_nb()
-            print("ME (%d) nbs: %s" % (me.index, me.nbs))
             data = {"from": to_peer_ind, "to": edge_nb_ind, "nbs": {nb for nb in me.nbs if nb not in me.ongoing_swap}}
             swap_event = Event(self.current_time + self.get_latency(to_peer_ind, edge_nb_ind), SWAP, data)
             self.schedule(swap_event)
@@ -187,17 +200,24 @@ class Simulation:
         me.nbs.add(me.get_edge_nb())
         me.unlock()
         me.reset_from_swap()
-
-        print("SWAP DONE BY %d" % me.index)
+        self.swaps += 1
 
     def handle_replace(self, event: Event):
         from_peer_ind: int = event.data["from"]
         to_peer_ind: int = event.data["to"]
+        replace_ind: int = event.data["replace"]
         me: Peer = self.peers[to_peer_ind]
 
         if from_peer_ind in me.nbs and event.data["replace"] in me.nbs:
-            print("NOTHING CHANGES")
+            pass
         else:
+            edge: Tuple[int, int] = tuple(sorted([from_peer_ind, to_peer_ind]))
+            assert edge in self.edge_to_clocks, "Edge %s does not exist in clock table" % str(edge)
+            clock_ind: int = self.edge_to_clocks.pop(edge)
+            new_edge: Tuple[int, int] = tuple(sorted([to_peer_ind, replace_ind]))
+            self.edge_to_clocks[new_edge] = clock_ind
+            self.clock_to_peers[clock_ind] = new_edge
+
             me.nbs.remove(from_peer_ind)
             me.nbs.add(event.data["replace"])
         me.unlock()
@@ -205,9 +225,9 @@ class Simulation:
     def run(self):
         # Create the initial events in the queue, for each edge
         for ind, edge in enumerate(self.G.edges):
-            self.clock_to_peers[ind] = set(edge)
-            self.peer_to_clocks[edge[0]].add(ind)
-            self.peer_to_clocks[edge[1]].add(ind)
+            sorted_edge: Tuple[int, int] = tuple(sorted(list(edge)))
+            self.clock_to_peers[ind] = sorted_edge
+            self.edge_to_clocks[sorted_edge] = ind
 
             delay = self.generate_inter_arrival_times()
             event = Event(delay, CLOCK_FIRE, {"clock": ind})
@@ -220,3 +240,5 @@ class Simulation:
             if self.current_time >= self.args.time_per_run:
                 break
             self.process_event(event)
+
+        self.swaps /= 2  # We count every swap twice...
