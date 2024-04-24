@@ -1,9 +1,23 @@
-from functools import total_ordering
-from typing import NamedTuple
+from typing import Dict
 
 
-@total_ordering
-class Event(NamedTuple):
-    time: float
-    from_vertex: int
-    to_vertex: int
+CLOCK_FIRE = "clock_fire"
+LOCK_REQUEST = "lock_request"
+LOCK_RESPONSE = "lock_response"
+SWAP = "swap"
+REPLACE = "replace"
+
+
+class Event:
+    COUNTER = 0
+
+    def __init__(self, time: float, type: str, data: Dict = None):
+        self.time: float = time
+        self.index = Event.COUNTER
+        self.type: str = type
+        self.data: Dict = data or {}
+
+        Event.COUNTER += 1
+
+    def __str__(self):
+        return "Event(%f, %s, %s)" % (self.time, self.type, self.data)
