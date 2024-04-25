@@ -162,14 +162,14 @@ class Simulation:
         me: Peer = self.peers[to_peer_ind]
         if me.is_locked():
             # Bummer, we have to politely refuse the lock
-            data = {"from": to_peer_ind, "to": from_peer_ind, "success": False}
+            data = {"from": to_peer_ind, "to": from_peer_ind, "success": False, "swap": event.data["edge"]}
             lock_response_event: Event = Event(self.current_time + self.get_latency(to_peer_ind, from_peer_ind), LOCK_RESPONSE, data)
             self.schedule(lock_response_event)
             return
 
         # Otherwise, lock and let the sender peer know
         me.lock(from_peer_ind, event.data["edge"])
-        data = {"from": to_peer_ind, "to": from_peer_ind, "success": True}
+        data = {"from": to_peer_ind, "to": from_peer_ind, "success": True, "swap": event.data["edge"]}
         lock_response_event: Event = Event(self.current_time + self.get_latency(to_peer_ind, from_peer_ind), LOCK_RESPONSE, data)
         self.schedule(lock_response_event)
 
@@ -178,7 +178,8 @@ class Simulation:
         to_peer_ind: int = event.data["to"]
         me: Peer = self.peers[to_peer_ind]
 
-        if not me.in_swap():  # It could be that a lock response is received after another peer already responded negatively
+        # TODO CHECK SPECIFIC SWAP
+        if me.ongoing_swap != event.data["swap"]:  # It could be that a lock response is received after another peer already responded negatively
             return
 
         if not event.data["success"]:
