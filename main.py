@@ -24,6 +24,7 @@ def run(process_index: int, args, data_dir):
         yappi.start(builtins=True)
 
     total_swaps: int = 0
+    failed_swaps: int = 0
     nb_frequencies: Dict[int, List[int]] = {}
     nbh_frequencies: Dict[int, Dict[Tuple[int], int]] = {}
     if args.track_all_nodes:
@@ -43,6 +44,7 @@ def run(process_index: int, args, data_dir):
         simulation = Simulation(args, G)
         simulation.run()
         total_swaps += simulation.swaps
+        failed_swaps += simulation.failed_swaps
 
         nbhs = simulation.get_neighbour_of_tracked_nodes()
         for node, nbh in nbhs.items():
@@ -50,7 +52,7 @@ def run(process_index: int, args, data_dir):
                 nb_frequencies[node][nb] += 1
             nbh_frequencies[node][nbh] += 1
 
-    print("Experiment took %f s., swaps done: %d" % (time.time() - start_time, total_swaps))
+    print("Experiment took %f s., swaps done: %d, failed swaps: %d" % (time.time() - start_time, total_swaps, failed_swaps))
 
     if args.profile:
         yappi.stop()
