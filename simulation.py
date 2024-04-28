@@ -120,17 +120,10 @@ class Simulation:
 
         # Check if one of the peers is working on a previous clock fire of the same edge - if so, ignore
         ignore: bool = False
-        for peer_ind in peer_tup:
-            peer: Peer = self.peers[peer_ind]
-            if peer.ongoing_swap == peer_tup:
+        for peer in self.peers:
+            if peer.locked_for_swap == peer_tup:
                 ignore = True
                 break
-
-            for peer_nb_ind in peer.nbs:
-                peer_nb: Peer = self.peers[peer_nb_ind]
-                if peer_nb.ongoing_swap == peer_tup:
-                    ignore = True
-                    break
 
         if not ignore:
             for peer_ind in peer_tup:
@@ -176,6 +169,14 @@ class Simulation:
         edge: Tuple[int, int] = event.data["edge"]
         swap_nb: int = edge[0] if edge[0] != from_peer_ind else edge[1]
         me: Peer = self.peers[to_peer_ind]
+
+        if from_peer_ind not in me.nbs:
+            # Looks like the sending peer is not a neighbour, which might happen if there is an inconsistency in the
+            # graph. Just make the swap fail to give the network time to reconcile.
+            data = {"from": to_peer_ind, "to": from_peer_ind, "success": False, "swap": event.data["edge"], "adjacent": False}
+            lock_response_event: Event = Event(self.current_time + self.get_latency(to_peer_ind, from_peer_ind), LOCK_RESPONSE, data)
+            self.schedule(lock_response_event)
+            return
 
         if from_peer_ind in me.nbs and swap_nb in me.nbs:
             # Looks like nothing changes for us
