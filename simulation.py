@@ -40,7 +40,7 @@ class Simulation:
                 if from_peer_ind == to_peer_ind:
                     self.latencies[(from_peer_ind, to_peer_ind)] = 0
                 else:
-                    self.latencies[(from_peer_ind, to_peer_ind)] = random.random() * 0.01  # Between 0 and 10 ms
+                    self.latencies[(from_peer_ind, to_peer_ind)] = random.random() * self.args.max_network_latency
 
         # Statistics
         self.nb_frequencies: List[int] = [0] * self.args.nodes
@@ -90,12 +90,12 @@ class Simulation:
             assert clock_peers in self.edge_to_clocks, "Edge %s does not have a clock?!" % str(clock_peers)
 
     def process_event(self, event: Event):
-        print(event)
+        # print(event)
         if event.type == CLOCK_FIRE:
             try:
                 self.sanity_check()
             except AssertionError:
-                print("insane")
+                pass
             self.handle_clock_fire(event)
         elif event.type == LOCK_REQUEST:
             self.handle_lock_request(event)
@@ -116,13 +116,13 @@ class Simulation:
         # Lock yourself and send out a lock request
         clock_ind: int = event.data["clock"]
         peer_tup: Tuple[int, int] = self.clock_to_peers[clock_ind]
-        print("Will start swap: %s" % str(peer_tup))
 
         # Check if one of the peers is working on a previous clock fire of the same edge - if so, ignore
         ignore: bool = False
         for peer in self.peers:
             if peer.locked_for_swap == peer_tup:
                 ignore = True
+                self.failed_swaps += 2
                 break
 
         if not ignore:

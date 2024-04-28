@@ -1,5 +1,4 @@
 import csv
-import glob
 import logging
 import multiprocessing
 import os
