@@ -1,6 +1,7 @@
 import bisect
 import heapq
 import random
+import statistics
 from collections import defaultdict
 from typing import List, Tuple, Dict
 
@@ -22,7 +23,8 @@ class Simulation:
         self.failed_swaps: int = 0
         self.edge_to_clocks: Dict[Tuple[int, int], int] = {}
         self.clock_to_peers: Dict[int, Tuple[int, int]] = {}
-        self.latencies = {}
+        self.latencies: Dict[Tuple[int, int], float] = {}
+        self.num_sites: int = 0
 
         heapq.heapify(self.events)
 
@@ -34,13 +36,16 @@ class Simulation:
             peer = Peer(peer_ind, nbs)
             self.peers.append(peer)
 
-        # Generate latencies
-        for from_peer_ind in range(self.args.nodes):
-            for to_peer_ind in range(self.args.nodes):
-                if from_peer_ind == to_peer_ind:
-                    self.latencies[(from_peer_ind, to_peer_ind)] = 0
-                else:
-                    self.latencies[(from_peer_ind, to_peer_ind)] = random.random() * self.args.max_network_latency
+        if self.args.latencies_file:
+            self.read_latencies()
+        else:
+            # Generate latencies
+            for from_peer_ind in range(self.args.nodes):
+                for to_peer_ind in range(self.args.nodes):
+                    if from_peer_ind == to_peer_ind:
+                        self.latencies[(from_peer_ind, to_peer_ind)] = 0
+                    else:
+                        self.latencies[(from_peer_ind, to_peer_ind)] = random.random() * self.args.max_network_latency
 
         # Statistics
         self.nb_frequencies: List[int] = [0] * self.args.nodes
@@ -48,7 +53,27 @@ class Simulation:
 
         np.random.seed()  # Make sure our runs are random
 
+    def read_latencies(self):
+        """
+        If specified in the settings, add latencies between the endpoints.
+        """
+        with open(self.args.latencies_file) as latencies_file:
+            for from_node_ind, line in enumerate(latencies_file.readlines()):
+                line_latencies: List[float] = [float(l) for l in line.strip().split(",")]
+                self.num_sites = len(line_latencies)
+                for to_node_ind, latency in enumerate(line_latencies):
+                    norm_latency: float = max(latency / 1000, 0)
+                    self.latencies[(from_node_ind, to_node_ind)] = norm_latency
+
+        avg_latency: float = statistics.mean(self.latencies.values())
+        max_latency: float = max(self.latencies.values())
+        print("Read latency matrix with %d sites! Avg latency: %f, max: %f" % (self.num_sites, avg_latency, max_latency))
+
     def get_latency(self, from_peer: int, to_peer: int) -> float:
+        if self.args.latencies_file:
+            from_peer_site: int = from_peer % self.num_sites
+            to_peer_site: int = to_peer % self.num_sites
+            return self.latencies[(from_peer_site, to_peer_site)]
         return self.latencies[(from_peer, to_peer)]
 
     def generate_inter_arrival_times(self):
