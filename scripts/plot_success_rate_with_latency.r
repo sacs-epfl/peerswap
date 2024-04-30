@@ -19,7 +19,7 @@ p <- ggplot(dat, aes(x=swaps_per_sec, y=frac, group=max_network_delay, color=max
      theme_bw() +
      xlab("Swaps per Second") +
      ylab("% Swaps Failed") +
-     labs(color="Max. Network Delay", shape="Max. Network Delay") +
+     labs(color="Network Delay", shape="Network Delay") +
      theme(legend.position="top", legend.margin=margin(t = 0, unit='cm'))
 
 ggsave("data/success_rate_with_latency.pdf", p, width=4.8, height=2.3)
@@ -31,7 +31,7 @@ p <- ggplot(dat, aes(x=swaps_per_sec, y=throughput, group=max_network_delay, col
      theme_bw() +
      xlab("Edge activations per Second") +
      ylab("Throughput [swaps/s.]") +
-     labs(color="Max. Network Delay", shape="Max. Network Delay") +
+     labs(color="Network Delay", shape="Network Delay") +
      theme(legend.position="top", legend.margin=margin(t = 0, unit='cm'))
 
 ggsave("data/throughput_with_latency.pdf", p, width=4.8, height=2.3)
