@@ -40,10 +40,15 @@ def run(process_index: int, args, data_dir):
         if run_index % 100000 == 0:
             logging.info("Process %d completed %d runs..." % (process_index, run_index))
 
-        simulation = Simulation(args, G)
-        simulation.run()
-        total_swaps += simulation.swaps
-        failed_swaps += simulation.failed_swaps
+        while True:
+            try:
+                simulation = Simulation(args, G)
+                simulation.run()
+                total_swaps += simulation.swaps
+                failed_swaps += simulation.failed_swaps
+                break
+            except:
+                print("Whoops - failed, trying that again")
 
         nbhs = simulation.get_neighbour_of_tracked_nodes()
         for node, nbh in nbhs.items():

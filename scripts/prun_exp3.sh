@@ -17,7 +17,7 @@ do
     do
         n=${nodes[$i]}
         rpp=${runs_per_proc[$i]}
-        commands+=("prun -t 12:00:00 -np 1 -o data/out_${s}_${t}.log bash run.sh $n $k $k $cpus $rpp $s")
+        commands+=("prun -t 12:00:00 -np 1 -o data/out_${s}_${t}.log bash run.sh $n $k $k $cpus $rpp $s 1")
     done
 done
 
