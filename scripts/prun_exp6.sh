@@ -7,6 +7,7 @@ max_jobs=16
 cpus=60
 runs_per_proc=342
 prate=0.0078125  # 20 swaps/s.
+max_delay=0.02
 
 # Array to hold all the commands
 declare -a commands
@@ -17,7 +18,7 @@ do
     for ((t=5; t <= 5; t++ ))
     do
         # Add command to the array
-        commands+=("prun -t 12:00:00 -np 1 -o data/out_${s}_${t}.log bash run.sh $nodes $k $t $cpus $runs_per_proc $s $prate")
+        commands+=("prun -t 12:00:00 -np 1 -o data/out_${s}_${t}.log bash run.sh $nodes $k $t $cpus $runs_per_proc $s $prate $max_delay")
     done
 done
 

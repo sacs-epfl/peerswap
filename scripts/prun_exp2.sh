@@ -16,7 +16,7 @@ do
     for t in 1 1.5 2 3 4
     do
         # Add command to the array
-        commands+=("prun -t 12:00:00 -np 1 -o data/out_${s}_${t}.log bash run.sh $nodes $k $t $cpus $runs_per_proc $s 1")
+        commands+=("prun -t 12:00:00 -np 1 -o data/out_${s}_${t}.log bash run.sh $nodes $k $t $cpus $runs_per_proc $s 1 0")
     done
 done
 

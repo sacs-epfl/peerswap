@@ -17,7 +17,7 @@ seeds=(451221 421462 884124 534785 556343 519038 688720 510637 343170 96032)
 for s in "${seeds[@]}"
 do
     # Add command to the array
-    commands+=("prun -t 24:00:00 -np 1 -o data/out_${s}_${t}.log bash run.sh $nodes $k $t $cpus $runs_per_proc $s 1")
+    commands+=("prun -t 24:00:00 -np 1 -o data/out_${s}_${t}.log bash run.sh $nodes $k $t $cpus $runs_per_proc $s 1 0")
 done
 
 # Function to check and run the next command if a slot is available
