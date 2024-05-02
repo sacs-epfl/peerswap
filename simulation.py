@@ -233,6 +233,7 @@ class Simulation:
         self.logger.debug("Peer %d received LOCK_RESPONSE from %d for swap %s", me.index, from_peer_ind, str(event.data["swap"]))
 
         if me.ongoing_swap != event.data["swap"]:  # It could be that a lock response is received after another peer already responded negatively
+            self.logger.warning("Peer %d received LOCK_RESPONSE for expired swap %s", me.index, str(event.data["swap"]))
             return
 
         if not event.data["success"]:
@@ -262,7 +263,8 @@ class Simulation:
 
             # Send the swap message to the other end of the activated edge
             edge_nb_ind: int = me.get_edge_nb()
-            data = {"from": to_peer_ind, "to": edge_nb_ind, "nbs": {nb for nb in me.nbs if nb not in me.ongoing_swap}}
+            data = {"from": to_peer_ind, "to": edge_nb_ind, "swap": me.ongoing_swap,
+                    "nbs": {nb for nb in me.nbs if nb not in me.ongoing_swap}}
             swap_event = Event(self.current_time + self.get_latency(to_peer_ind, edge_nb_ind), SWAP, data)
             self.schedule(swap_event)
 
@@ -274,12 +276,12 @@ class Simulation:
         from_peer_ind: int = event.data["from"]
         to_peer_ind: int = event.data["to"]
         me: Peer = self.peers[to_peer_ind]
+        swap: Tuple[int, int] = event.data["swap"]
         me.other_ready_for_swap = True
         me.other_nbs = event.data["nbs"]
         self.logger.debug("Peer %d received SWAP from %d", me.index, from_peer_ind)
 
-        # TODO I think we need a sanity check here
-        if me.ready_for_swap:
+        if me.ongoing_swap == swap and me.ready_for_swap:
             self.do_swap(me)
 
     def handle_swap_fail(self, event: Event):
