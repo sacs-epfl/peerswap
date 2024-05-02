@@ -120,10 +120,6 @@ class Simulation:
     def process_event(self, event: Event):
         self.logger.debug("Handling event: %s" % event)
         if event.type == CLOCK_FIRE:
-            try:
-                self.sanity_check()
-            except AssertionError:
-                pass
             self.handle_clock_fire(event)
         elif event.type == LOCK_REQUEST:
             self.handle_lock_request(event)
