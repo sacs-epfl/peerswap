@@ -15,12 +15,11 @@ from args import get_args
 from simulation import Simulation
 
 
-logging.basicConfig(level=logging.INFO)
-
-
 def run(process_index: int, args, data_dir):
     if args.profile:
         yappi.start(builtins=True)
+
+    logging.basicConfig(level=getattr(logging, args.log_level))
 
     total_swaps: int = 0
     failed_swaps: int = 0
