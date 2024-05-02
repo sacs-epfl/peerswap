@@ -25,6 +25,7 @@ def run(process_index: int, args, data_dir):
     failed_swaps: int = 0
     nb_frequencies: Dict[int, List[int]] = {}
     nbh_frequencies: Dict[int, Dict[Tuple[int], int]] = {}
+    swap_durations: List[float] = []
     peer_locked_time: Dict[int, float] = {}
     for node in range(args.nodes):
         peer_locked_time[node] = 0
@@ -49,6 +50,7 @@ def run(process_index: int, args, data_dir):
                 simulation.run()
                 total_swaps += simulation.swaps
                 failed_swaps += simulation.failed_swaps
+                swap_durations = simulation.swap_durations
                 break
             except Exception as exc:
                 logging.exception(exc)
@@ -89,6 +91,11 @@ def run(process_index: int, args, data_dir):
         out_file.write("node,avg_time_locked\n")
         for node in range(args.nodes):
             out_file.write("%d,%g\n" % (node, peer_locked_time[node] / args.runs_per_process))
+
+    with open(os.path.join(data_dir, "avg_swap_times_%d.csv" % process_index), "w") as out_file:
+        out_file.write("duration\n")
+        for duration in swap_durations:
+            out_file.write("%g\n" % duration)
 
 
 if __name__ == "__main__":
@@ -183,3 +190,22 @@ if __name__ == "__main__":
         out_file.write("algorithm,nodes,k,time_per_run,seed,node,avg_time_locked\n")
         for node, time_locked in merged_lock_times.items():
             out_file.write("swiftpeer,%d,%d,%g,%d,%d,%g\n" % (args.nodes, args.k, args.time_per_run, args.seed, node, time_locked))
+
+    # Merge average swap times
+    swap_times: List[float] = []
+    input_files = [os.path.join(data_dir, "avg_swap_times_%d.csv" % process_index) for process_index in range(cpus_to_use)]
+    for input_file in input_files:
+        with open(input_file, "r") as in_file:
+            reader = csv.reader(in_file)
+            next(reader)  # Skip the header
+            for row in reader:
+                swap_time = float(row[0])
+                swap_times.append(swap_time)
+        os.remove(input_file)
+
+    output_file_name = os.path.join(data_dir, "avg_swap_times.csv")
+    with open(output_file_name, "w") as out_file:
+        out_file.write("algorithm,nodes,k,time_per_run,seed,max_network_latency,swap_time\n")
+        for swap_time in swap_times:
+            group = "realistic" if args.latencies_file else "0-%d ms" % int(args.max_network_latency * 1000)
+            out_file.write("swiftpeer,%d,%d,%g,%d,%s,%g\n" % (args.nodes, args.k, args.time_per_run, args.seed, group, swap_time))

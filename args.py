@@ -13,6 +13,7 @@ def get_args():
     parser.add_argument("--cpus", type=int, default=None)
     parser.add_argument('--profile', action='store_true')
     parser.add_argument('--track-all-nodes', action='store_true')
+    parser.add_argument('--track-swap-times', action='store_true')
     parser.add_argument('--latencies-file', type=str, default=None)
     parser.add_argument('--log-level', type=str, default="ERROR")
 

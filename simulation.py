@@ -28,6 +28,10 @@ class Simulation:
         self.num_sites: int = 0
         self.logger = logging.getLogger(self.__class__.__name__)
 
+        self.locked_for_count: Dict[Tuple[int, int], int] = {}
+        self.swap_started: Dict[Tuple[int, int], float] = {}
+        self.swap_durations: List[float] = []
+
         heapq.heapify(self.events)
 
         self.G = G or random_regular_graph(self.args.k, self.args.nodes, seed=self.args.seed)
@@ -55,6 +59,19 @@ class Simulation:
         self.node_to_track: int = 0
 
         np.random.seed()  # Make sure our runs are random
+
+    def add_to_lock_count(self, swap: Tuple[int, int]):
+        if swap not in self.locked_for_count:
+            self.locked_for_count[swap] = 0
+        self.locked_for_count[swap] += 1
+
+    def remove_from_lock_count(self, swap: Tuple[int, int], success: bool):
+        self.locked_for_count[swap] -= 1
+        if self.args.track_swap_times and self.locked_for_count[swap] == 0 and success:
+            # The swap is done - record its duration
+            swap_time: float = self.current_time - self.swap_started[swap]
+            self.swap_durations.append(swap_time)
+            self.locked_for_count.pop(swap)
 
     def read_latencies(self):
         """
@@ -152,6 +169,7 @@ class Simulation:
                 break
 
         if not ignore:
+            self.swap_started[peer_tup] = self.current_time
             for peer_ind in peer_tup:
                 peer: Peer = self.peers[peer_ind]
                 if peer.is_locked():
@@ -167,6 +185,7 @@ class Simulation:
                 peer.ready_for_swap = False
                 peer.other_nbs = False
                 peer.lock(peer_tup, event.time)
+                self.add_to_lock_count(peer_tup)
                 peer.lock_responses_received = 0
                 for nb_peer_ind in peer.nbs:
                     if nb_peer_ind in peer_tup:
@@ -222,6 +241,7 @@ class Simulation:
 
         # Otherwise, lock and let the sender peer know
         me.lock(event.data["edge"], event.time)
+        self.add_to_lock_count(event.data["edge"])
         data = {"from": to_peer_ind, "to": from_peer_ind, "success": True, "swap": event.data["edge"], "adjacent": False}
         lock_response_event: Event = Event(self.current_time + self.get_latency(to_peer_ind, from_peer_ind), LOCK_RESPONSE, data)
         self.schedule(lock_response_event)
@@ -252,6 +272,7 @@ class Simulation:
 
                 if me.locked_for_swap == event.data["swap"]:
                     me.unlock(event.time)
+                    self.remove_from_lock_count(event.data["swap"], False)
                     me.reset_from_swap()
 
                 return
@@ -297,6 +318,7 @@ class Simulation:
 
         if me.locked_for_swap == event.data["swap"]:
             me.unlock(event.time)
+            self.remove_from_lock_count(event.data["swap"], False)
             me.reset_from_swap()
 
         self.failed_swaps += 1
@@ -315,6 +337,7 @@ class Simulation:
         me.nbs = me.other_nbs
         me.nbs.add(me.get_edge_nb())
         me.unlock(self.current_time)
+        self.remove_from_lock_count(me.ongoing_swap, True)
         me.reset_from_swap()
         self.swaps += 1
 
@@ -331,6 +354,7 @@ class Simulation:
         if me.locked_for_swap != event.data["swap"]:
             assert False, "Received replace for wrong swap: %s vs %s" % (str(me.locked_for_swap), str(event.data["swap"]))
 
+        success: bool = False
         if from_peer_ind in me.nbs and event.data["replace"] in me.nbs:
             pass
         else:
@@ -340,10 +364,12 @@ class Simulation:
             new_edge: Tuple[int, int] = tuple(sorted([to_peer_ind, replace_ind]))
             self.edge_to_clocks[new_edge] = clock_ind
             self.clock_to_peers[clock_ind] = new_edge
+            success = True
 
             me.nbs.remove(from_peer_ind)
             me.nbs.add(event.data["replace"])
         me.unlock(event.time)
+        self.remove_from_lock_count(event.data["swap"], success)
 
     def handle_unlock(self, event: Event):
         from_peer_ind: int = event.data["from"]
@@ -354,6 +380,7 @@ class Simulation:
 
         if me.locked_for_swap == swap:
             me.unlock(event.time)
+            self.remove_from_lock_count(swap, False)
 
     def run(self):
         # Create the initial events in the queue, for each edge
