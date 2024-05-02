@@ -7,6 +7,8 @@ class Peer:
         self.index = index
         self.nbs: Set[int] = nbs
         self.locked_for_swap: Optional[Tuple[int, int]] = None
+        self.locked_at_time: Optional[float] = None
+        self.total_time_locked: float = 0
 
         self.ongoing_swap: Optional[Tuple[int, int]] = None
         self.other_nbs: Optional[Set[int]] = None
@@ -22,11 +24,14 @@ class Peer:
     def in_swap(self) -> bool:
         return self.ongoing_swap is not None
 
-    def lock(self, edge: Tuple[int, int]):
+    def lock(self, edge: Tuple[int, int], time: float):
         self.locked_for_swap = edge
+        self.locked_at_time = time
 
-    def unlock(self):
+    def unlock(self, time: float):
         self.locked_for_swap = None
+        self.total_time_locked += (time - self.locked_at_time)
+        self.locked_at_time = None
 
     def reset_from_swap(self):
         self.ongoing_swap = None

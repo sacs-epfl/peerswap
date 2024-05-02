@@ -166,7 +166,7 @@ class Simulation:
                 peer.other_ready_for_swap = False
                 peer.ready_for_swap = False
                 peer.other_nbs = False
-                peer.lock(peer_tup)
+                peer.lock(peer_tup, event.time)
                 peer.lock_responses_received = 0
                 for nb_peer_ind in peer.nbs:
                     if nb_peer_ind in peer_tup:
@@ -221,7 +221,7 @@ class Simulation:
             return
 
         # Otherwise, lock and let the sender peer know
-        me.lock(event.data["edge"])
+        me.lock(event.data["edge"], event.time)
         data = {"from": to_peer_ind, "to": from_peer_ind, "success": True, "swap": event.data["edge"], "adjacent": False}
         lock_response_event: Event = Event(self.current_time + self.get_latency(to_peer_ind, from_peer_ind), LOCK_RESPONSE, data)
         self.schedule(lock_response_event)
@@ -250,7 +250,7 @@ class Simulation:
                 self.schedule(swap_fail_event)
 
                 if me.locked_for_swap == event.data["swap"]:
-                    me.unlock()
+                    me.unlock(event.time)
                     me.reset_from_swap()
 
                 return
@@ -294,7 +294,7 @@ class Simulation:
             self.schedule(unlock_event)
 
         if me.locked_for_swap == event.data["swap"]:
-            me.unlock()
+            me.unlock(event.time)
             me.reset_from_swap()
 
         self.failed_swaps += 1
@@ -312,7 +312,7 @@ class Simulation:
         # Finally, replace your neighbors
         me.nbs = me.other_nbs
         me.nbs.add(me.get_edge_nb())
-        me.unlock()
+        me.unlock(self.current_time)
         me.reset_from_swap()
         self.swaps += 1
 
@@ -341,7 +341,7 @@ class Simulation:
 
             me.nbs.remove(from_peer_ind)
             me.nbs.add(event.data["replace"])
-        me.unlock()
+        me.unlock(event.time)
 
     def handle_unlock(self, event: Event):
         from_peer_ind: int = event.data["from"]
@@ -351,7 +351,7 @@ class Simulation:
         self.logger.debug("Peer %d received UNLOCK from %d for swap %s", me.index, from_peer_ind, str(swap))
 
         if me.locked_for_swap == swap:
-            me.unlock()
+            me.unlock(event.time)
 
     def run(self):
         # Create the initial events in the queue, for each edge

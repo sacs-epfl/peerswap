@@ -25,6 +25,10 @@ def run(process_index: int, args, data_dir):
     failed_swaps: int = 0
     nb_frequencies: Dict[int, List[int]] = {}
     nbh_frequencies: Dict[int, Dict[Tuple[int], int]] = {}
+    peer_locked_time: Dict[int, float] = {}
+    for node in range(args.nodes):
+        peer_locked_time[node] = 0
+
     if args.track_all_nodes:
         for node in range(args.nodes):
             nb_frequencies[node] = [0] * args.nodes
@@ -46,7 +50,8 @@ def run(process_index: int, args, data_dir):
                 total_swaps += simulation.swaps
                 failed_swaps += simulation.failed_swaps
                 break
-            except:
+            except Exception as exc:
+                logging.exception(exc)
                 print("Whoops - failed, trying that again")
 
         nbhs = simulation.get_neighbour_of_tracked_nodes()
@@ -54,6 +59,9 @@ def run(process_index: int, args, data_dir):
             for nb in nbh:
                 nb_frequencies[node][nb] += 1
             nbh_frequencies[node][nbh] += 1
+
+        for node in range(args.nodes):
+            peer_locked_time[node] += simulation.peers[node].total_time_locked
 
     print("Experiment took %f s., swaps done: %d, failed swaps: %d" % (time.time() - start_time, total_swaps, failed_swaps))
 
@@ -76,6 +84,11 @@ def run(process_index: int, args, data_dir):
             for neighbourhood, freq in nbhs.items():
                 nbh_str = "-".join(["%d" % nb for nb in neighbourhood])
                 out_file.write("%d,%s,%d\n" % (tracked_node,nbh_str, freq))
+
+    with open(os.path.join(data_dir, "peer_time_locked_%d.csv" % process_index), "w") as out_file:
+        out_file.write("node,avg_time_locked\n")
+        for node in range(args.nodes):
+            out_file.write("%d,%g\n" % (node, peer_locked_time[node] / args.runs_per_process))
 
 
 if __name__ == "__main__":
@@ -146,3 +159,27 @@ if __name__ == "__main__":
             for nbh, freq in nbhs.items():
                 nbh_str = "-".join(["%d" % nb for nb in nbh])
                 out_file.write("swiftpeer,%d,%d,%g,%d,%d,%s,%d\n" % (args.nodes, args.k, args.time_per_run, args.seed, tracked_node, nbh_str, freq))
+
+    # Merge peer lock time
+    merged_lock_times: Dict[int, float] = {}
+    for node in range(args.nodes):
+        merged_lock_times[node] = 0
+
+    input_files = [os.path.join(data_dir, "peer_time_locked_%d.csv" % process_index) for process_index in range(cpus_to_use)]
+    for input_file in input_files:
+        with open(input_file, "r") as in_file:
+            reader = csv.reader(in_file)
+            next(reader)  # Skip the header
+            for row in reader:
+                node_id, time_locked = int(row[0]), float(row[1])
+                merged_lock_times[node_id] += time_locked
+        os.remove(input_file)
+
+    for node in range(args.nodes):
+        merged_lock_times[node] /= cpus_to_use
+
+    output_file_name = os.path.join(data_dir, "peer_time_locked.csv")
+    with open(output_file_name, "w") as out_file:
+        out_file.write("algorithm,nodes,k,time_per_run,seed,node,avg_time_locked\n")
+        for node, time_locked in merged_lock_times.items():
+            out_file.write("swiftpeer,%d,%d,%g,%d,%d,%g\n" % (args.nodes, args.k, args.time_per_run, args.seed, node, time_locked))
