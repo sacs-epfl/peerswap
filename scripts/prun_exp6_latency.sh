@@ -12,9 +12,9 @@ prate=0.01953125  # 50 swaps/s.
 declare -a commands
 
 # Populate the commands array
-for ((s=42; s <= 42; s++ ))
+for ((s=42; s <= 46; s++ ))
 do
-    for t in 30 60 90 120 150 180
+    for t in 60 90 120 150 180
     do
         # Add command to the array
         commands+=("prun -t 12:00:00 -np 1 -o data/out_${s}_${t}.log bash run_with_latency.sh $nodes $k $t $cpus $runs_per_proc $s $prate data/latencies.txt")

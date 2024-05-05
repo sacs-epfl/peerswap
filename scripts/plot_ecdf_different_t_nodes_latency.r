@@ -2,9 +2,19 @@ library(ggplot2)
 library(dplyr)
 
 directories <- c()
-for (t in c(30, 60, 90, 120)) {
-    for (s in 42:42) {
-        directory_name <- paste("n_1024_k_5_t_", t, "_s_", s, sep = "")
+
+# Synthetic
+# for (t in c(30, 60, 90, 120)) {
+#     for (s in 42:42) {
+#         directory_name <- paste("n_1024_k_5_t_", t, "_s_", s, sep = "")
+#         directories <- c(directories, directory_name)
+#     }
+# }
+
+# Realistic
+for (t in c(60, 90, 120, 150, 180)) {
+    for (s in 42:46) {
+        directory_name <- paste("synthetic/n_1024_k_5_t_", t, "_s_", s, sep = "")
         directories <- c(directories, directory_name)
     }
 }
@@ -18,17 +28,6 @@ for (file_path in file_paths) {
         merged_data <- rbind(merged_data, dat)
     }
 }
-
-# synthetic_data <- read.csv("data/exp2/n_4096_k_4_t_4_s_42_synthetic/frequencies.csv")
-# merged_data$time_per_run <- as.factor(merged_data$time_per_run)
-#
-# for (t in c(3)) {
-#     filtered_data <- merged_data[merged_data$time_per_run == t,]
-#     for (s in 42:46) {
-#         further_filtered <- filtered_data[filtered_data$seed == s,]
-#         print(ks.test(further_filtered$freq, synthetic_data$freq))
-#     }
-# }
 
 merged_data$time_per_run <- as.factor(merged_data$time_per_run)
 
