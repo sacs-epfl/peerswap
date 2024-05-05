@@ -207,5 +207,5 @@ if __name__ == "__main__":
     with open(output_file_name, "w") as out_file:
         out_file.write("algorithm,nodes,k,time_per_run,seed,max_network_latency,swap_time\n")
         for swap_time in swap_times:
-            group = "realistic" if args.latencies_file else "0-%d ms" % int(args.max_network_latency * 1000)
+            group = "traces" if args.latencies_file else "0-%d ms" % int(args.max_network_latency * 1000)
             out_file.write("swiftpeer,%d,%d,%g,%d,%s,%g\n" % (args.nodes, args.k, args.time_per_run, args.seed, group, swap_time))

@@ -1,7 +1,7 @@
 library(ggplot2)
 library(dplyr)
 
-dat <- read.csv("data/success_rate_with_latency.csv")
+dat <- read.csv("data/exp7/success_rate_with_latency.csv")
 dat$max_network_delay <- as.factor(dat$max_network_delay)
 
 dat <- dat %>%
@@ -10,7 +10,7 @@ dat <- dat %>%
     success_mean = mean(success), fail_mean = mean(fail))
 
 dat$frac <- dat$fail_mean / (dat$success_mean + dat$fail_mean) * 100
-dat$throughput <- dat$success_mean / 100
+dat$throughput <- dat$success_mean / 120
 print(dat, n=500)
 
 p <- ggplot(dat, aes(x=swaps_per_sec, y=frac, group=max_network_delay, color=max_network_delay)) +
@@ -22,7 +22,7 @@ p <- ggplot(dat, aes(x=swaps_per_sec, y=frac, group=max_network_delay, color=max
      labs(color="Network Delay", shape="Network Delay") +
      theme(legend.position="top", legend.margin=margin(t = 0, unit='cm'))
 
-ggsave("data/success_rate_with_latency.pdf", p, width=4.8, height=2.3)
+ggsave("data/exp7/success_rate_with_latency.pdf", p, width=4.8, height=2.3)
 
 
 p <- ggplot(dat, aes(x=swaps_per_sec, y=throughput, group=max_network_delay, color=max_network_delay)) +
@@ -34,4 +34,4 @@ p <- ggplot(dat, aes(x=swaps_per_sec, y=throughput, group=max_network_delay, col
      labs(color="Network Delay", shape="Network Delay") +
      theme(legend.position="top", legend.margin=margin(t = 0, unit='cm'))
 
-ggsave("data/throughput_with_latency.pdf", p, width=4.8, height=2.3)
+ggsave("data/exp7/throughput_with_latency.pdf", p, width=4.8, height=2.3)
