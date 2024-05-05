@@ -26,7 +26,7 @@ p <- ggplot(data = dat, aes(x = spectral_gap, y=distance, group=spectral_gap)) +
      ylab("KS-test Distance") +
      facet_wrap(~t)
 
-ggsave("data/exp5/ks_distances_boxplot.pdf", p, width=7, height=2.3)
+ggsave("data/exp5/ks_distances_boxplot.pdf", p, width=5.2, height=2.3)
 
 
 # # T = 6

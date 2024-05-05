@@ -106,7 +106,12 @@ if __name__ == "__main__":
 
     print("Will start experiments on %d CPUs..." % cpus_to_use)
 
-    data_dir = os.path.join("data", "n_%d_k_%d_t_%g_s_%d" % (args.nodes, args.k, args.time_per_run, args.seed))
+    dir_name = "n_%d_k_%d_t_%g_s_%d" % (args.nodes, args.k, args.time_per_run, args.seed)
+    if args.latencies_file:
+        dir_name += "_l_traces"
+    else:
+        dir_name += "_l_%g" % args.max_network_latency
+    data_dir = os.path.join("data", dir_name)
     if os.path.exists(data_dir):
         shutil.rmtree(data_dir)
     os.makedirs(data_dir, exist_ok=True)
