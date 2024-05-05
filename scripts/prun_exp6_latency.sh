@@ -17,7 +17,7 @@ do
     for t in 30 60 90 120 150 180
     do
         # Add command to the array
-        commands+=("prun -t 12:00:00 -np 1 -o data/out_${s}_${t}.log bash run.sh $nodes $k $t $cpus $runs_per_proc $s $prate data/latencies.txt")
+        commands+=("prun -t 12:00:00 -np 1 -o data/out_${s}_${t}.log bash run_with_latency.sh $nodes $k $t $cpus $runs_per_proc $s $prate data/latencies.txt")
     done
 done
 
