@@ -136,12 +136,13 @@ if __name__ == "__main__":
                 merged_frequencies[tracked_node][node_id] += freq
         os.remove(input_file)
 
+    group = "traces" if args.latencies_file else "0-%d ms" % int(args.max_network_latency * 1000)
     output_file_name = os.path.join(data_dir, "frequencies.csv")
     with open(output_file_name, "w") as out_file:
-        out_file.write("algorithm,nodes,k,time_per_run,seed,tracked_node,node,freq\n")
+        out_file.write("algorithm,nodes,k,time_per_run,seed,max_network_delay,tracked_node,node,freq\n")
         for tracked_node, freqs in merged_frequencies.items():
             for node_ind, freq in enumerate(freqs):
-                out_file.write("swiftpeer,%d,%d,%g,%d,%d,%d,%d\n" % (args.nodes, args.k, args.time_per_run, args.seed, tracked_node, node_ind, freq))
+                out_file.write("swiftpeer,%d,%d,%g,%d,%s,%d,%d,%d\n" % (args.nodes, args.k, args.time_per_run, args.seed, group, tracked_node, node_ind, freq))
 
     # Merge neighbourhoods
     merged_nbh_frequencies: Dict[int, Dict[Tuple[int], int]] = {}
@@ -161,11 +162,11 @@ if __name__ == "__main__":
 
     output_file_name = os.path.join(data_dir, "nbh_frequencies.csv")
     with open(output_file_name, "w") as out_file:
-        out_file.write("algorithm,nodes,k,time_per_run,seed,tracked_node,nbh,freq\n")
+        out_file.write("algorithm,nodes,k,time_per_run,seed,max_network_delay,tracked_node,nbh,freq\n")
         for tracked_node, nbhs in merged_nbh_frequencies.items():
             for nbh, freq in nbhs.items():
                 nbh_str = "-".join(["%d" % nb for nb in nbh])
-                out_file.write("swiftpeer,%d,%d,%g,%d,%d,%s,%d\n" % (args.nodes, args.k, args.time_per_run, args.seed, tracked_node, nbh_str, freq))
+                out_file.write("swiftpeer,%d,%d,%g,%d,%s,%d,%s,%d\n" % (args.nodes, args.k, args.time_per_run, args.seed, group, tracked_node, nbh_str, freq))
 
     # Merge peer lock time
     merged_lock_times: Dict[int, float] = {}

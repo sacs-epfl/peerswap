@@ -2,7 +2,7 @@ library(ggplot2)
 library(dplyr)
 
 directories <- c()
-for (t in c(60, 120, 180, 240, 300)) {
+for (t in c(30, 60, 90, 120)) {
     for (s in 42:42) {
         directory_name <- paste("n_1024_k_5_t_", t, "_s_", s, sep = "")
         directories <- c(directories, directory_name)
