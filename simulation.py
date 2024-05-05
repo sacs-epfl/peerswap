@@ -25,6 +25,7 @@ class Simulation:
         self.edge_to_clocks: Dict[Tuple[int, int], int] = {}
         self.clock_to_peers: Dict[int, Tuple[int, int]] = {}
         self.latencies: Dict[Tuple[int, int], float] = {}
+        self.node_to_latency: List[int] = []
         self.num_sites: int = 0
         self.logger = logging.getLogger(self.__class__.__name__)
 
@@ -44,6 +45,9 @@ class Simulation:
 
         if self.args.latencies_file:
             self.read_latencies()
+            self.node_to_latency = list(range(self.args.nodes))
+            r = random.Random(args.seed)
+            r.shuffle(self.node_to_latency)
         else:
             # Generate latencies
             self.logger.info("Generating random latencies")
@@ -91,8 +95,8 @@ class Simulation:
 
     def get_latency(self, from_peer: int, to_peer: int) -> float:
         if self.args.latencies_file:
-            from_peer_site: int = from_peer % self.num_sites
-            to_peer_site: int = to_peer % self.num_sites
+            from_peer_site: int = self.node_to_latency[from_peer] % self.num_sites
+            to_peer_site: int = self.node_to_latency[to_peer] % self.num_sites
             return self.latencies[(from_peer_site, to_peer_site)]
         return self.latencies[(from_peer, to_peer)]
 
