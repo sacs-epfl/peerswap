@@ -61,4 +61,4 @@ p <- ggplot(merged_data, aes(x=freq, group=nodes, color=nodes, linetype=nodes)) 
      ylab("ECDF") +
      theme(legend.position="top", legend.margin=margin(t = 0, unit='cm'))
 
-ggsave("data/exp3/nodes_frequencies_different_n_ecdf.pdf", p, width=4.8, height=2.3)
+ggsave("data/exp3/nodes_frequencies_different_n_ecdf.pdf", p, width=4.4, height=2.3)

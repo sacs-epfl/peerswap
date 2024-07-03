@@ -33,11 +33,11 @@ for (t in c(3)) {
 p <- ggplot(merged_data, aes(x=freq,group=time_per_run, color=time_per_run, linetype=time_per_run)) +
      stat_ecdf() +
      coord_cartesian(xlim=c(NA, 200)) +
-     scale_color_discrete(name = "Experiment Duration [s.]") +
-     scale_linetype_discrete(name = "Experiment Duration [s.]") +
+     scale_color_discrete(name = "Exp. Duration [s.]") +
+     scale_linetype_discrete(name = "Exp. Duration [s.]") +
      theme_bw() +
      xlab("Peer Frequency") +
      ylab("ECDF") +
      theme(legend.position="top", legend.margin=margin(t = 0, unit='cm'))
 
-ggsave("data/exp2/nodes_frequencies_different_t_ecdf.pdf", p, width=4.8, height=2.3)
+ggsave("data/exp2/nodes_frequencies_different_t_ecdf.pdf", p, width=4.2, height=2.3)
