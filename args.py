@@ -11,9 +11,14 @@ def get_args():
     parser.add_argument("--k", type=int, default=7)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--cpus", type=int, default=None)
-    parser.add_argument('--profile', action='store_true')
-    parser.add_argument('--track-all-nodes', action='store_true')
-    parser.add_argument('--track-swap-times', action='store_true')
+
+    # Toggle this to run the basic, quicker protocol without actual message passing without node.
+    # The basic version of the simulator simply maintains a graph and changes node positions.
+    parser.add_argument('--basic', action=argparse.BooleanOptionalAction)
+
+    parser.add_argument('--profile', action=argparse.BooleanOptionalAction)
+    parser.add_argument('--track-all-nodes', action=argparse.BooleanOptionalAction)
+    parser.add_argument('--track-swap-times', action=argparse.BooleanOptionalAction)
     parser.add_argument('--latencies-file', type=str, default=None)
     parser.add_argument('--log-level', type=str, default="ERROR")
 

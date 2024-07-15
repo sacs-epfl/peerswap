@@ -1,4 +1,5 @@
-from typing import Dict
+from functools import total_ordering
+from typing import Dict, NamedTuple
 
 
 CLOCK_FIRE = "clock_fire"
@@ -25,3 +26,10 @@ class Event:
 
     def __str__(self):
         return "Event(%f, %s, %s)" % (self.time, self.type, self.data)
+
+
+@total_ordering
+class BasicEvent(NamedTuple):
+    time: float
+    from_vertex: int
+    to_vertex: int

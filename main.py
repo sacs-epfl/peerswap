@@ -12,7 +12,62 @@ from typing import List, Dict, Tuple
 
 from networkx import random_regular_graph
 
+from peerswap.simulation_basic import Simulation
 from peerswap.simulation_lock import SimulationWithLock
+
+
+def run_basic(process_index: int, args, data_dir):
+    if args.profile:
+        yappi.start(builtins=True)
+
+    total_swaps: int = 0
+    nb_frequencies: Dict[int, List[int]] = {}
+    nbh_frequencies: Dict[int, Dict[Tuple[int], int]] = {}
+    if args.track_all_nodes:
+        for node in range(args.nodes):
+            nb_frequencies[node] = [0] * args.nodes
+            nbh_frequencies[node] = defaultdict(lambda: 0)
+    else:
+        nb_frequencies = {0: [0] * args.nodes}
+        nbh_frequencies = {0: defaultdict(lambda: 0)}
+
+    start_time = time.time()
+    G = random_regular_graph(args.k, args.nodes, seed=args.seed)
+    for run_index in range(args.runs_per_process):
+        if run_index % 100000 == 0:
+            logging.info("Process %d completed %d runs..." % (process_index, run_index))
+
+        simulation = Simulation(args, G)
+        simulation.run()
+        total_swaps += simulation.swaps
+
+        nbhs = simulation.get_neighbour_of_tracked_nodes()
+        for node, nbh in nbhs.items():
+            for nb in nbh:
+                nb_frequencies[node][nb] += 1
+            nbh_frequencies[node][nbh] += 1
+
+    print("Experiment took %f s., swaps done: %d" % (time.time() - start_time, total_swaps))
+
+    if args.profile:
+        yappi.stop()
+        yappi_stats = yappi.get_func_stats()
+        yappi_stats.sort("tsub")
+        yappi_stats.save(os.path.join(data_dir, "yappi_%d.stats" % process_index), type='callgrind')
+
+    # Write away the results
+    with open(os.path.join(data_dir, "frequencies_%d.csv" % process_index), "w") as out_file:
+        out_file.write("tracked_node,node,freq\n")
+        for tracked_node, nbhs in nb_frequencies.items():
+            for node_id, freq in enumerate(nbhs):
+                out_file.write("%d,%d,%d\n" % (tracked_node, node_id, freq))
+
+    with open(os.path.join(data_dir, "nbh_frequencies_%d.csv" % process_index), "w") as out_file:
+        out_file.write("tracked_node,neighbourhood,freq\n")
+        for tracked_node, nbhs in nbh_frequencies.items():
+            for neighbourhood, freq in nbhs.items():
+                nbh_str = "-".join(["%d" % nb for nb in neighbourhood])
+                out_file.write("%d,%s,%d\n" % (tracked_node,nbh_str, freq))
 
 
 def run(process_index: int, args, data_dir):
@@ -107,10 +162,11 @@ if __name__ == "__main__":
     print("Will start experiments on %d CPUs..." % cpus_to_use)
 
     dir_name = "n_%d_k_%d_t_%g_s_%d" % (args.nodes, args.k, args.time_per_run, args.seed)
-    if args.latencies_file:
-        dir_name += "_l_traces"
-    else:
-        dir_name += "_l_%g" % args.max_network_latency
+    if not args.basic:
+        if args.latencies_file:
+            dir_name += "_l_traces"
+        else:
+            dir_name += "_l_%g" % args.max_network_latency
     data_dir = os.path.join("data", dir_name)
     if os.path.exists(data_dir):
         shutil.rmtree(data_dir)
@@ -118,7 +174,7 @@ if __name__ == "__main__":
 
     processes = []
     for process_index in range(cpus_to_use):
-        p = Process(target=run, args=(process_index, args, data_dir))
+        p = Process(target=run_basic if args.basic else run, args=(process_index, args, data_dir))
         p.start()
         processes.append(p)
 
@@ -173,45 +229,46 @@ if __name__ == "__main__":
                 nbh_str = "-".join(["%d" % nb for nb in nbh])
                 out_file.write("swiftpeer,%d,%d,%g,%d,%s,%d,%s,%d\n" % (args.nodes, args.k, args.time_per_run, args.seed, group, tracked_node, nbh_str, freq))
 
-    # Merge peer lock time
-    merged_lock_times: Dict[int, float] = {}
-    for node in range(args.nodes):
-        merged_lock_times[node] = 0
+    if not args.basic:
+        # Merge peer lock time
+        merged_lock_times: Dict[int, float] = {}
+        for node in range(args.nodes):
+            merged_lock_times[node] = 0
 
-    input_files = [os.path.join(data_dir, "peer_time_locked_%d.csv" % process_index) for process_index in range(cpus_to_use)]
-    for input_file in input_files:
-        with open(input_file, "r") as in_file:
-            reader = csv.reader(in_file)
-            next(reader)  # Skip the header
-            for row in reader:
-                node_id, time_locked = int(row[0]), float(row[1])
-                merged_lock_times[node_id] += time_locked
-        os.remove(input_file)
+        input_files = [os.path.join(data_dir, "peer_time_locked_%d.csv" % process_index) for process_index in range(cpus_to_use)]
+        for input_file in input_files:
+            with open(input_file, "r") as in_file:
+                reader = csv.reader(in_file)
+                next(reader)  # Skip the header
+                for row in reader:
+                    node_id, time_locked = int(row[0]), float(row[1])
+                    merged_lock_times[node_id] += time_locked
+            os.remove(input_file)
 
-    for node in range(args.nodes):
-        merged_lock_times[node] /= cpus_to_use
+        for node in range(args.nodes):
+            merged_lock_times[node] /= cpus_to_use
 
-    output_file_name = os.path.join(data_dir, "peer_time_locked.csv")
-    with open(output_file_name, "w") as out_file:
-        out_file.write("algorithm,nodes,k,time_per_run,seed,node,avg_time_locked\n")
-        for node, time_locked in merged_lock_times.items():
-            out_file.write("swiftpeer,%d,%d,%g,%d,%d,%g\n" % (args.nodes, args.k, args.time_per_run, args.seed, node, time_locked))
+        output_file_name = os.path.join(data_dir, "peer_time_locked.csv")
+        with open(output_file_name, "w") as out_file:
+            out_file.write("algorithm,nodes,k,time_per_run,seed,node,avg_time_locked\n")
+            for node, time_locked in merged_lock_times.items():
+                out_file.write("swiftpeer,%d,%d,%g,%d,%d,%g\n" % (args.nodes, args.k, args.time_per_run, args.seed, node, time_locked))
 
-    # Merge average swap times
-    swap_times: List[float] = []
-    input_files = [os.path.join(data_dir, "avg_swap_times_%d.csv" % process_index) for process_index in range(cpus_to_use)]
-    for input_file in input_files:
-        with open(input_file, "r") as in_file:
-            reader = csv.reader(in_file)
-            next(reader)  # Skip the header
-            for row in reader:
-                swap_time = float(row[0])
-                swap_times.append(swap_time)
-        os.remove(input_file)
+        # Merge average swap times
+        swap_times: List[float] = []
+        input_files = [os.path.join(data_dir, "avg_swap_times_%d.csv" % process_index) for process_index in range(cpus_to_use)]
+        for input_file in input_files:
+            with open(input_file, "r") as in_file:
+                reader = csv.reader(in_file)
+                next(reader)  # Skip the header
+                for row in reader:
+                    swap_time = float(row[0])
+                    swap_times.append(swap_time)
+            os.remove(input_file)
 
-    output_file_name = os.path.join(data_dir, "avg_swap_times.csv")
-    with open(output_file_name, "w") as out_file:
-        out_file.write("algorithm,nodes,k,time_per_run,seed,max_network_latency,swap_time\n")
-        for swap_time in swap_times:
-            group = "traces" if args.latencies_file else "0-%d ms" % int(args.max_network_latency * 1000)
-            out_file.write("swiftpeer,%d,%d,%g,%d,%s,%g\n" % (args.nodes, args.k, args.time_per_run, args.seed, group, swap_time))
+        output_file_name = os.path.join(data_dir, "avg_swap_times.csv")
+        with open(output_file_name, "w") as out_file:
+            out_file.write("algorithm,nodes,k,time_per_run,seed,max_network_latency,swap_time\n")
+            for swap_time in swap_times:
+                group = "traces" if args.latencies_file else "0-%d ms" % int(args.max_network_latency * 1000)
+                out_file.write("swiftpeer,%d,%d,%g,%d,%s,%g\n" % (args.nodes, args.k, args.time_per_run, args.seed, group, swap_time))
