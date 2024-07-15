@@ -1,92 +1,78 @@
-# peer-sampler
+# PeerSwap: A Peer-Sampler with Randomness Guarantees
 
+This repository contains the source code associated with our paper "PeerSwap: A Peer-Sampler with Randomness Guarantees", accepted at [SRDS'24](https://srds-conference.org).
+PeerSwap is a peer-sampling protocol with provable randomness guarantees.
 
+### Running PeerSwap
 
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+First install the required Python dependencies:
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.epfl.ch/sacs/peer-sampler.git
-git branch -M main
-git push -uf origin main
+pip install -r requirements.txt
 ```
 
-## Integrate with your tools
+The simulator can be executed in two modes.
+In basic mode, we first generate a k-regular graph using `networkx`, and then schedule peer swaps according to the Poisson clock on each edge.
+While executing the swaps, we keep track of the neighbourhood distributions of a single, random peer or all peers if the `--track-all-nodes` option is provided when starting the program.
+Basic mode can easily be enabled by passing the `--basic` flag but does not support network delays or clock desynchronization between peers since it assumes swaps are executed instantly.
+For example, you can use the following command.
 
-- [ ] [Set up project integrations](https://gitlab.epfl.ch/sacs/peer-sampler/-/settings/integrations)
+```
+python3 main.py --cpus 1 --runs-per-process 100 --nodes 1024 --time-per-run 7 --k 7 --basic
+```
 
-## Collaborate with your team
+The above command will run 100 experiments sequentially and each experiment will run PeerSwap for 7 seconds using a 7-regular graph with 1024 nodes.
+Your output should look something like this:
 
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+```
+Will start experiments on 1 CPUs...
+Experiment took 7.301254 s., swaps done: 2509524
+Processes done - combining results
+```
 
-## Test and Deploy
+At the end of the experiment we combine the individual results of all runs.
+If you don't pass the `--cpus` option, PeerSwap will use all available CPUs minus two on the system.
+Default argument values can be found in `peerswap/args.py`.
 
-Use the built-in continuous integration in GitLab.
+By default however, we execute the full PeerSwap protocol where peers exchange a sequence of messages to perform a single swap.
+This mode is much slower than basic mode but it enables the evaluation of PeerSwap in the presence of network delays.
+For example, see the following command.
 
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+```
+python3 main.py --cpus 1 --poisson-rate 0.1 --max-network-latency 0 --runs-per-process 100 
+```
 
-***
+Your output should look something like this:
 
-# Editing this README
+```
+Will start experiments on 1 CPUs...
+Experiment took 6.155684 s., swaps done: 24603, failed swaps: 0
+Processes done - combining results
+```
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+### Custom network latencies
 
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+In default mode, PeerSwap will generate pairwise latencies uniformly between 0 ms and a maximum latency specified by the `--max-network-latency` option (in seconds).
+One can also specify a latency matrix as a CSV file with the `--latencies-file` option.
+For example, to specify the latencies for a three-node network, your CSV file can look like as follows (note that the latencies are provided in milliseconds):
 
-## Name
-Choose a self-explaining name for your project.
+```
+0,183.6055,90.8835
+183.029,0,44.826
+90.7965,44.793,0
+```
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+If there are more nodes in the experiment than rows/values in the latency matrix, PeerSwap will automatically assign nodes to latency values in a round-robin fashion.
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+### Reference
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+If you use our work, please cite us using the following citation:
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+```
+@inproceedings{guerraoui2024peerswap,
+  title={PeerSwap: A Peer-Sampler with Randomness Guarantees},
+  author={Guerraoui, Rachid and Kermarrec, Anne-Marie and Kucherenko, Anastasiia and Pinot, Rafael and de Vos, Martijn},
+  booktitle={Proceedings of the 43rd International Symposium on Reliable Distributed Systems (SRDS 2024)},
+  year={2024}
+}
+```
