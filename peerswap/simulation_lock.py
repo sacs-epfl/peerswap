@@ -9,11 +9,11 @@ from typing import List, Tuple, Dict
 import numpy as np
 from networkx import random_regular_graph
 
-from event import Event, CLOCK_FIRE, LOCK_REQUEST, LOCK_RESPONSE, SWAP, REPLACE, UNLOCK, SWAP_FAIL
-from peer import Peer
+from peerswap.event import Event, CLOCK_FIRE, LOCK_REQUEST, LOCK_RESPONSE, SWAP, REPLACE, UNLOCK, SWAP_FAIL
+from peerswap.peer import Peer
 
 
-class Simulation:
+class SimulationWithLock:
 
     def __init__(self, args, G = None):
         self.args = args

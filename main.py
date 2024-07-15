@@ -4,15 +4,15 @@ import multiprocessing
 import os
 import shutil
 import time
+import yappi
+from args import get_args
 from collections import defaultdict
 from multiprocessing import Process
 from typing import List, Dict, Tuple
 
-import yappi
 from networkx import random_regular_graph
 
-from args import get_args
-from simulation import Simulation
+from peerswap.simulation_lock import SimulationWithLock
 
 
 def run(process_index: int, args, data_dir):
@@ -46,7 +46,7 @@ def run(process_index: int, args, data_dir):
 
         while True:
             try:
-                simulation = Simulation(args, G)
+                simulation = SimulationWithLock(args, G)
                 simulation.run()
                 total_swaps += simulation.swaps
                 failed_swaps += simulation.failed_swaps
