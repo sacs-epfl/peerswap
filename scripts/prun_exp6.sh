@@ -1,21 +1,25 @@
 #!/bin/bash
 
 # Maximum number of concurrent jobs
-nodes=64
-k=4
-t=4
-max_jobs=16
+nodes=1024
+k=5
+max_jobs=8
 cpus=60
-runs_per_proc=992775
+runs_per_proc=342
+prate=0.01953125  # 50 swaps/s.
+max_delay=0.05
 
 # Array to hold all the commands
 declare -a commands
 
 # Populate the commands array
-for ((s=42; s <= 42; s++ ))
+for ((s=42; s <= 46; s++ ))
 do
-    # Add command to the array
-    commands+=("prun -t 12:00:00 -np 1 -o data/out_${s}_${t}.log bash run.sh $nodes $k $t $cpus $runs_per_proc $s 1 0")
+    for t in 60 90 120 150 180
+    do
+        # Add command to the array
+        commands+=("prun -t 12:00:00 -np 1 -o data/out_${s}_${t}.log bash run.sh $nodes $k $t $cpus $runs_per_proc $s $prate $max_delay")
+    done
 done
 
 # Function to check and run the next command if a slot is available

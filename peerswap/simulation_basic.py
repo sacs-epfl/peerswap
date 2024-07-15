@@ -4,7 +4,7 @@ from typing import List, Dict, Tuple
 import numpy as np
 from networkx import random_regular_graph
 
-from event import Event
+from peerswap.event import BasicEvent
 
 
 class Simulation:
@@ -12,7 +12,7 @@ class Simulation:
     def __init__(self, args, G = None):
         self.args = args
         self.current_time: float = 0
-        self.events: List[Tuple[float, Event]] = []
+        self.events: List[Tuple[float, BasicEvent]] = []
         self.swaps: int = 0
         self.nb_frequencies: List[int] = [0] * self.args.nodes
         self.node_to_track: int = 0
@@ -31,7 +31,7 @@ class Simulation:
     def generate_inter_arrival_times(self):
         return np.random.exponential(scale=1 / self.args.poisson_rate)
 
-    def schedule(self, event: Event):
+    def schedule(self, event: BasicEvent):
         heapq.heappush(self.events, (event.time, event))
 
     def get_neighbour_of_tracked_nodes(self):
@@ -43,7 +43,7 @@ class Simulation:
                 res[node] = tuple(sorted([self.vertex_to_node_map[nb_vertex] for nb_vertex in list(self.G.neighbors(self.node_to_vertex_map[node]))]))
             return res
 
-    def process_event(self, event: Event):
+    def process_event(self, event: BasicEvent):
         #print("[t=%.2f] Activating edge (%d - %d)" % (self.current_time, event.from_vertex, event.to_vertex))
 
         # Swap nodes
@@ -57,14 +57,14 @@ class Simulation:
 
         # Schedule new edge activation
         delay = self.generate_inter_arrival_times()
-        event = Event(self.current_time + delay, event.from_vertex, event.to_vertex)
+        event = BasicEvent(self.current_time + delay, event.from_vertex, event.to_vertex)
         self.schedule(event)
 
     def run(self):
         # Create the initial events in the queue, for each edge
         for edge in self.G.edges:
             delay = self.generate_inter_arrival_times()
-            event = Event(delay, *edge)
+            event = BasicEvent(delay, *edge)
             self.schedule(event)
 
         while self.events:

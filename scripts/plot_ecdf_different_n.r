@@ -20,6 +20,35 @@ for (file_path in file_paths) {
     }
 }
 
+merged_data$time_per_run <- as.factor(merged_data$time_per_run)
+
+for (n in c(2048, 4096, 8192, 16384, 32768)) {
+    synthetic_data <- read.csv(paste("data/exp3/n_", n, "_k_4_t_4_s_42_synthetic/frequencies.csv", sep=""))
+    filtered_data <- merged_data[merged_data$nodes == n,]
+    total_ks_distance <- 0
+    total_ks_p_value <- 0
+    count <- 0
+    for (s in 42:46) {
+        further_filtered <- filtered_data[filtered_data$seed == s,]
+        ks_test_result <- ks.test(further_filtered$freq, synthetic_data$freq)
+
+        # Accumulate KS statistics
+        total_ks_distance <- total_ks_distance + ks_test_result$statistic
+        total_ks_p_value <- total_ks_p_value + ks_test_result$p.value
+        count <- count + 1
+    }
+
+    if (count > 0) {
+        avg_ks_distance <- total_ks_distance / count
+        avg_ks_p_value <- total_ks_p_value / count
+
+        # Print the averaged values
+        cat("Average KS Test results for n =", n, "\n")
+        cat("Average KS Distance:", avg_ks_distance, "\n")
+        cat("Average P-value:", avg_ks_p_value, "\n\n")
+    }
+}
+
 merged_data$nodes <- as.factor(merged_data$nodes)
 
 p <- ggplot(merged_data, aes(x=freq, group=nodes, color=nodes, linetype=nodes)) +
@@ -30,6 +59,6 @@ p <- ggplot(merged_data, aes(x=freq, group=nodes, color=nodes, linetype=nodes)) 
      theme_bw() +
      xlab("Peer Frequency") +
      ylab("ECDF") +
-     theme(legend.position=c(0.84, 0.43), legend.box.background = element_rect(colour = "black"))
+     theme(legend.position="top", legend.margin=margin(t = 0, unit='cm'))
 
-ggsave("data/exp3/nodes_frequencies_different_n_ecdf.pdf", p, width=4, height=2.5)
+ggsave("data/exp3/nodes_frequencies_different_n_ecdf.pdf", p, width=4.4, height=2.3)
