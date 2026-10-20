@@ -64,6 +64,12 @@ For example, to specify the latencies for a three-node network, your CSV file ca
 
 If there are more nodes in the experiment than rows/values in the latency matrix, PeerSwap will automatically assign nodes to latency values in a round-robin fashion.
 
+### Lean convergence proof
+
+The [Lean formalization](lean/README.md) proves convergence of the ideal atomic
+PeerSwap model to uniform ordered peer samples. It includes pinned dependencies,
+build instructions, and a description of the proof's assumptions and scope.
+
 ### Reference
 
 If you use our work, please cite us using the following citation:

@@ -3,3 +3,6 @@ __pycache__/**
 data/**
 **.pyc
 .DS_Store
+
+# Lean dependencies and build artifacts
+lean/.lake/
